@@ -1,0 +1,4356 @@
+// ===== BACKEND API CONFIGURATION =====
+const API_URL = 'https://worker-portal-backend-xmv4.onrender.com/api';
+// ======================================
+
+<!DOCTYPE html>
+<!-- cSpell:disable -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Worker Management System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .login-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-gradient);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+            transition: opacity 0.5s ease, transform 0.5s ease, visibility 0.5s;
+        }
+
+        .login-container.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+
+        .login-box {
+            background: var(--card-bg);
+            padding: 40px 30px;
+            border-radius: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--shadow);
+            animation: slideUp 0.6s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            font-size: 28px;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            background: #f3f4f6;
+            padding: 5px;
+            border-radius: 15px;
+        }
+
+        .role-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            color: var(--text-secondary);
+        }
+
+        .role-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.2);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 18px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .login-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .language-switcher {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            animation: shake 0.5s;
+        }
+
+        .error-message.show {
+            display: flex;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .app-container {
+            display: none;
+            padding-bottom: 80px;
+            min-height: 100vh;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .app-container.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.9) 100%);
+            padding: 20px;
+            border-radius: 0 0 30px 30px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .worker-info h2 {
+            font-size: 20px;
+            color: var(--text-primary);
+            margin-bottom: 3px;
+        }
+
+        .worker-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .live-clock {
+            background: var(--primary);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .checkin-section {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            margin: 0 15px 20px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .status-display {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f3f4f6;
+            border-radius: 15px;
+        }
+
+        .status-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .status-value.checked-out {
+            color: var(--danger);
+        }
+
+        .checkin-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .check-btn {
+            flex: 1;
+            max-width: 150px;
+            padding: 20px;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .check-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .check-btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .check-btn i {
+            font-size: 24px;
+        }
+
+        .check-in-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .check-in-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+        }
+
+        .check-in-btn:disabled {
+            background: #d1d5db;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .check-out-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            box-shadow: 0 5px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .check-out-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5);
+        }
+
+        .check-out-btn:disabled {
+            background: #d1d5db;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 0 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: var(--primary);
+        }
+
+        .stat-card:nth-child(1)::after { background: #10b981; }
+        .stat-card:nth-child(2)::after { background: #ef4444; }
+        .stat-card:nth-child(3)::after { background: #f59e0b; }
+        .stat-card:nth-child(4)::after { background: #8b5cf6; }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 12px;
+            background: #f3f4f6;
+            color: var(--primary);
+        }
+
+        .stat-card:nth-child(1) .stat-icon { background: #d1fae5; color: #059669; }
+        .stat-card:nth-child(2) .stat-icon { background: #fee2e2; color: #dc2626; }
+        .stat-card:nth-child(3) .stat-icon { background: #fef3c7; color: #d97706; }
+        .stat-card:nth-child(4) .stat-icon { background: #ede9fe; color: #7c3aed; }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .today-status {
+            background: white;
+            margin: 0 15px 20px;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .status-row:last-child {
+            border-bottom: none;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-working {
+            background: #d1fae5;
+            color: #065f46;
+            animation: bounce 2s infinite;
+        }
+
+        .status-break {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-ended {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .quick-access {
+            padding: 0 15px;
+            margin-bottom: 20px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .menu-item {
+            background: white;
+            border-radius: 20px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 2px solid transparent;
+        }
+
+        .menu-item:hover {
+            transform: translateY(-5px) scale(1.05);
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+        }
+
+        .menu-item:active {
+            transform: scale(0.95);
+        }
+
+        .menu-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-size: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .menu-item:nth-child(1) .menu-icon { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .menu-item:nth-child(2) .menu-icon { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .menu-item:nth-child(3) .menu-icon { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .menu-item:nth-child(4) .menu-icon { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .menu-item:nth-child(5) .menu-icon { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+        .menu-item:nth-child(6) .menu-icon { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
+        .menu-item:nth-child(7) .menu-icon { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
+        .menu-item:nth-child(8) .menu-icon { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333; }
+
+        .menu-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: none;
+            justify-content: space-around;
+            padding: 12px 0;
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.1);
+            z-index: 1000;
+            border-radius: 30px 30px 0 0;
+        }
+
+        .bottom-nav.show {
+            display: flex;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 5px;
+            transition: all 0.3s;
+            color: var(--text-secondary);
+            position: relative;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            width: 40px;
+            height: 4px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .nav-item i {
+            font-size: 22px;
+            transition: transform 0.3s;
+        }
+
+        .nav-item:hover i {
+            transform: translateY(-3px);
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: flex-end;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            border-radius: 30px 30px 0 0;
+            padding: 25px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .close-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: #f3f4f6;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--text-secondary);
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: #e5e7eb;
+            transform: rotate(90deg);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #f9fafb;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .photo-upload {
+            border: 2px dashed #d1d5db;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f9fafb;
+        }
+
+        .photo-upload:hover {
+            border-color: var(--primary);
+            background: #f0f9ff;
+        }
+
+        .photo-upload i {
+            font-size: 40px;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .machine-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .machine-option {
+            padding: 15px 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            font-weight: 600;
+            background: white;
+        }
+
+        .machine-option:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .machine-option.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .training-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .training-item {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 20px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+
+        .training-item:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .training-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .training-name {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+
+        .training-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-video {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .btn-manual {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .salary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .salary-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .salary-amount {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .salary-label {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .salary-breakdown {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        .breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .breakdown-row:last-child {
+            border-bottom: none;
+            font-weight: 700;
+            font-size: 18px;
+            margin-top: 5px;
+            padding-top: 15px;
+            border-top: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-item {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #e5e7eb;
+        }
+
+        .download-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .download-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .leave-balance {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .balance-card {
+            background: white;
+            padding: 20px 10px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-top: 4px solid var(--primary);
+        }
+
+        .balance-card.sick { border-top-color: #ef4444; }
+        .balance-card.casual { border-top-color: #3b82f6; }
+        .balance-card.earned { border-top-color: #10b981; }
+
+        .balance-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .balance-type {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #f3f4f6;
+            color: var(--text-secondary);
+        }
+
+        .calendar-day.header {
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .calendar-day.present {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .calendar-day.absent {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .calendar-day.today {
+            border: 2px solid var(--primary);
+            transform: scale(1.1);
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: white;
+            padding: 16px 24px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 3000;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            min-width: 300px;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .toast.success .toast-icon { background: #d1fae5; color: #059669; }
+        .toast.error .toast-icon { background: #fee2e2; color: #dc2626; }
+        .toast.info .toast-icon { background: #dbeafe; color: #2563eb; }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 700;
+            margin-bottom: 2px;
+            color: var(--text-primary);
+        }
+
+        .toast-message {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 380px) {
+            .menu-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .machine-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .report-card {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow);
+            border-left: 5px solid var(--primary);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .report-date {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .report-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-approved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .ot-hours {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 10px;
+        }
+
+        .ot-earnings {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .admin-container {
+            display: none;
+            padding-bottom: 30px;
+            min-height: 100vh;
+        }
+
+        .admin-container.active {
+            display: block;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 0 15px 15px;
+            overflow-x: auto;
+        }
+
+        .admin-tab-btn {
+            flex-shrink: 0;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 12px;
+            background: #f3f4f6;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .admin-tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .admin-panel {
+            display: none;
+            padding: 0 15px;
+        }
+
+        .admin-panel.active {
+            display: block;
+        }
+
+        .worker-row {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .worker-row-info h4 {
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+
+        .worker-row-info p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .approve-btn, .reject-btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 6px;
+        }
+
+        .approve-btn { background: #d1fae5; color: #065f46; }
+        .reject-btn { background: #fee2e2; color: #991b1b; }
+
+        .tap-loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+        }
+        .tap-loading-overlay.show {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="language-switcher" onclick="toggleLanguage()">
+        <i class="fas fa-globe"></i>
+        <span id="langText">English</span>
+    </div>
+
+    <div class="login-container" id="loginScreen">
+        <div class="login-box">
+            <div class="login-header">
+                <h1 id="loginTitle">Worker Portal</h1>
+                <p id="loginSubtitle">Sign in to your account</p>
+            </div>
+            
+            <div class="role-selector">
+                <button class="role-btn active" onclick="selectRole('worker')" id="roleWorker">Worker</button>
+                <button class="role-btn" onclick="selectRole('admin')" id="roleAdmin">Admin</button>
+            </div>
+
+            <div class="error-message" id="errorMessage">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText">Please fill all fields</span>
+            </div>
+
+            <div class="input-group">
+                <label id="labelEmpId">Employee ID</label>
+                <input type="text" id="empId" placeholder="Enter Employee ID" onkeypress="handleEnter(event)">
+            </div>
+
+            <div class="input-group">
+                <label id="labelPassword">Password</label>
+                <input type="password" id="password" placeholder="Enter Password" onkeypress="handleEnter(event)">
+            </div>
+
+            <button class="login-btn" onclick="login()" id="loginBtn">
+                <span id="loginBtnText">Login</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="app-container" id="mainApp">
+        <div class="header">
+            <div class="header-top">
+                <div class="worker-info">
+                    <h2 id="workerName">Rajesh Kumar</h2>
+                    <p id="workerId">ID: EMP2024001 | Production Dept</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="live-clock" id="liveClock">09:30:45 AM</div>
+                    <button onclick="logout()" title="Logout" style="width: 40px; height: 40px; border-radius: 12px; border: none; background: #fee2e2; color: #dc2626; cursor: pointer; font-size: 16px;"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="checkin-section">
+            <div class="status-display">
+                <div class="status-label" id="statusLabel">CURRENT STATUS</div>
+                <div class="status-value" id="currentStatus">Not Checked In</div>
+                <div style="margin-top: 10px; font-size: 14px; color: var(--text-secondary);" id="statusTime">--:--</div>
+            </div>
+            <div class="checkin-buttons">
+                <button class="check-btn check-in-btn" id="checkInBtn" onclick="checkIn()">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span id="btnCheckIn">CHECK IN</span>
+                </button>
+                <button class="check-btn check-out-btn" id="checkOutBtn" onclick="openProductionReportModal()" disabled>
+                    <i class="fas fa-file-alt"></i>
+                    <span id="btnCheckOut">Production Report</span>
+                </button>
+            </div>
+            <div id="locationBadge" style="display:none; margin-top: 15px; padding: 10px 15px; border-radius: 12px; font-size: 13px; font-weight: 600; background: #f3f4f6;"></div>
+            <button id="fieldDutyBtn" onclick="toggleFieldDuty()" style="display:none; margin-top: 10px; width: 100%; padding: 10px; border: 2px solid var(--primary); background: white; color: var(--primary); border-radius: 12px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                <i class="fas fa-route"></i> <span id="fieldDutyBtnText">Mark Field Duty (Going Off-site for Work)</span>
+            </button>
+        </div>
+
+        <div class="today-status" id="machineJobCard" style="display:none;">
+            <div class="section-title">
+                <i class="fas fa-industry"></i>
+                <span id="machineJobTitle">Machine & Job</span>
+            </div>
+            <div class="status-row">
+                <span id="currentMachineLbl">Machine</span>
+                <strong id="currentMachineLabel">Not Selected</strong>
+            </div>
+            <div class="status-row">
+                <span id="currentJobLbl">Current Job</span>
+                <strong id="currentJobLabel">None</strong>
+            </div>
+            <button class="submit-btn" style="margin-top: 10px;" onclick="openMachineJobModal()">
+                <i class="fas fa-cog"></i> <span id="selectMachineBtnText">Select Machine / Job</span>
+            </button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                <div class="stat-value">24</div>
+                <div class="stat-label" id="statPresent">Present Days</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-calendar-times"></i></div>
+                <div class="stat-value">2</div>
+                <div class="stat-label" id="statAbsent">Absent Days</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-value">12.5</div>
+                <div class="stat-label" id="statOT">Total OT Hours</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="stat-value">₹18.6k</div>
+                <div class="stat-label" id="statSalary">This Month Salary</div>
+            </div>
+        </div>
+
+        <div class="today-status">
+            <div class="section-title">
+                <i class="fas fa-info-circle"></i>
+                <span id="todayStatusTitle">Today's Status</span>
+            </div>
+            <div class="status-row">
+                <span id="shiftLabel">Shift Time</span>
+                <strong>9:00 AM - 5:00 PM</strong>
+            </div>
+            <div class="status-row">
+                <span id="currentStatusLabel">Current Status</span>
+                <span class="status-indicator status-ended" id="workStatus">
+                    <i class="fas fa-circle" style="font-size: 8px;"></i>
+                    <span id="workStatusText">Not Started</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="quick-access">
+            <div class="section-title">
+                <i class="fas fa-th-large"></i>
+                <span id="quickAccessTitle">Quick Access</span>
+            </div>
+            <div class="menu-grid">
+                <div class="menu-item" onclick="openModal('productionModal')">
+                    <div class="menu-icon"><i class="fas fa-box"></i></div>
+                    <div class="menu-label" id="menuProduction">Production<br>Report</div>
+                </div>
+                <div class="menu-item" onclick="openModal('maintenanceModal')">
+                    <div class="menu-icon"><i class="fas fa-tools"></i></div>
+                    <div class="menu-label" id="menuMaintenance">Machine<br>Maintenance</div>
+                </div>
+                <div class="menu-item" onclick="openModal('materialModal')">
+                    <div class="menu-icon"><i class="fas fa-clipboard-list"></i></div>
+                    <div class="menu-label" id="menuMaterial">Material<br>Request</div>
+                </div>
+                <div class="menu-item" onclick="openModal('trainingModal')">
+                    <div class="menu-icon"><i class="fas fa-graduation-cap"></i></div>
+                    <div class="menu-label" id="menuTraining">Training<br>Center</div>
+                </div>
+                <div class="menu-item" onclick="openPayslipModal()">
+                    <div class="menu-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <div class="menu-label" id="menuPayslip">Payslip &<br>Salary</div>
+                </div>
+                <div class="menu-item" onclick="openModal('leaveModal')">
+                    <div class="menu-icon"><i class="fas fa-umbrella-beach"></i></div>
+                    <div class="menu-label" id="menuLeave">Apply<br>Leave</div>
+                </div>
+                <div class="menu-item" onclick="openModal('historyModal')">
+                    <div class="menu-icon"><i class="fas fa-history"></i></div>
+                    <div class="menu-label" id="menuHistory">Work<br>History</div>
+                </div>
+                <div class="menu-item" onclick="openModal('reportsModal')">
+                    <div class="menu-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="menu-label" id="menuReports">Reports &<br>OT</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-container" id="adminApp">
+        <div class="header">
+            <div class="header-top">
+                <div class="worker-info">
+                    <h2 id="adminName">Admin Panel</h2>
+                    <p id="adminSub">Factory Operations Overview</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="live-clock" id="adminClock">09:30:45 AM</div>
+                    <button onclick="logout()" title="Logout" style="width: 40px; height: 40px; border-radius: 12px; border: none; background: #fee2e2; color: #dc2626; cursor: pointer; font-size: 16px;"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-value" id="adminStatTotal">42</div>
+                <div class="stat-label">Total Workers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+                <div class="stat-value" id="adminStatPresent">38</div>
+                <div class="stat-label">Present Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-tools"></i></div>
+                <div class="stat-value" id="adminStatIssues">3</div>
+                <div class="stat-label">Open Issues</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+                <div class="stat-value" id="adminStatPending">5</div>
+                <div class="stat-label">Pending Approvals</div>
+            </div>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="admin-tab-btn active" onclick="switchAdminTab('attendance', this)">Attendance</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('orders', this)">Order Booking</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('operators', this)">Operators</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('location', this)">Live Location</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('maintenance', this)">Maintenance</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('leave', this)">Leave Requests</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('ot', this)">OT Approvals</button>
+        </div>
+
+        <div class="admin-panel active" id="adminAttendance">
+            <div class="worker-row">
+                <div class="worker-row-info">
+                    <h4>Rajesh Kumar - EMP2024001</h4>
+                    <p>Checked in 9:02 AM · Single Color Machine</p>
+                </div>
+                <span class="report-status status-approved">Present</span>
+            </div>
+            <div class="worker-row">
+                <div class="worker-row-info">
+                    <h4>Suresh Patil - EMP2024002</h4>
+                    <p>Checked in 8:58 AM · Cutting Machine</p>
+                </div>
+                <span class="report-status status-approved">Present</span>
+            </div>
+            <div class="worker-row">
+                <div class="worker-row-info">
+                    <h4>Anita Sharma - EMP2024003</h4>
+                    <p>Not checked in</p>
+                </div>
+                <span class="report-status status-pending">Absent</span>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="adminLocation">
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 15px; padding: 12px 15px; margin-bottom: 15px; font-size: 12px; color: #1e40af;">
+                <i class="fas fa-info-circle"></i> <strong>Trial mode:</strong> location-based check-in restriction is currently OFF (workers can check in from anywhere). GPS tracking still runs once checked in; if GPS is turned off or lost for 30s, the worker is auto checked-out. Turn on the geofence restriction in code (GEOFENCE_ENABLED) once ready.
+            </div>
+            <div id="adminLocationPanel">
+                <p style="text-align:center; color: var(--text-secondary); padding: 20px;">Loading location data...</p>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="adminMaintenance">
+            <div class="worker-row">
+                <div class="worker-row-info">
+                    <h4>Six Color Machine - Breakdown</h4>
+                    <p>Reported by Suresh Patil · 10:15 AM</p>
+                </div>
+                <div>
+                    <button class="approve-btn" onclick="showToast('Marked resolved', 'success')">Resolve</button>
+                </div>
+            </div>
+            <div class="worker-row">
+                <div class="worker-row-info">
+                    <h4>Gumming Unit - Noise Issue</h4>
+                    <p>Reported by Rajesh Kumar · 8:40 AM</p>
+                </div>
+                <div>
+                    <button class="approve-btn" onclick="showToast('Marked resolved', 'success')">Resolve</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="adminLeave">
+            <div class="worker-row">
+                <div class="worker-row-info">
+                    <h4>Anita Sharma - Sick Leave</h4>
+                    <p>Feb 26 - Feb 27, 2024</p>
+                </div>
+                <div>
+                    <button class="approve-btn" onclick="showToast('Leave approved', 'success')">Approve</button>
+                    <button class="reject-btn" onclick="showToast('Leave rejected', 'error')">Reject</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="adminOt">
+            <div class="worker-row">
+                <div class="worker-row-info">
+                    <h4>Rajesh Kumar - 2.5 hrs OT</h4>
+                    <p>Feb 20, 2024 · Emergency work</p>
+                </div>
+                <div>
+                    <button class="approve-btn" onclick="showToast('OT approved', 'success')">Approve</button>
+                    <button class="reject-btn" onclick="showToast('OT rejected', 'error')">Reject</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="adminOrders">
+            <div style="background: white; padding: 20px; border-radius: 20px; margin-bottom: 15px; box-shadow: var(--shadow);">
+                <div class="section-title" style="margin-bottom: 15px;">
+                    <i class="fas fa-file-excel"></i>
+                    <span>Upload Order Sheet (Excel/CSV)</span>
+                </div>
+                <div class="photo-upload" onclick="document.getElementById('excelUploadInput').click()">
+                    <i class="fas fa-file-upload"></i>
+                    <div>Click to upload Excel/CSV sheet</div>
+                    <small style="color: var(--text-secondary);">Columns like Size, Paper, UPS, Core will auto-map</small>
+                </div>
+                <input type="file" id="excelUploadInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelUpload(event)">
+                <div id="excelUploadStatus" style="margin-top: 10px; font-size: 13px; color: var(--text-secondary);"></div>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 20px; margin-bottom: 15px; box-shadow: var(--shadow);">
+                <div class="section-title" style="margin-bottom: 15px;">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add New Order</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Order / Job No.</label>
+                    <input type="text" id="orderJobNo" placeholder="Enter order/job number">
+                </div>
+
+                <div class="form-group">
+                    <label>Customer Name</label>
+                    <input type="text" id="orderCustomer" placeholder="Enter customer name">
+                </div>
+
+                <div class="form-group">
+                    <label>Size</label>
+                    <select id="orderSize" onchange="toggleCustomInput('orderSize', 'orderSizeCustom')"></select>
+                    <input type="text" id="orderSizeCustom" placeholder="Enter custom size (e.g. 4x5)" style="display:none; margin-top: 10px;">
+                </div>
+
+                <div class="form-group">
+                    <label>Paper</label>
+                    <select id="orderPaper" onchange="toggleCustomInput('orderPaper', 'orderPaperCustom')"></select>
+                    <input type="text" id="orderPaperCustom" placeholder="Enter custom paper type" style="display:none; margin-top: 10px;">
+                </div>
+
+                <div class="form-group">
+                    <label>No. of UPS</label>
+                    <select id="orderUps" onchange="toggleCustomInput('orderUps', 'orderUpsCustom')"></select>
+                    <input type="text" id="orderUpsCustom" placeholder="Enter custom UPS" style="display:none; margin-top: 10px;">
+                </div>
+
+                <div class="form-group">
+                    <label>Per Roll Qty</label>
+                    <select id="orderPerRollQty" onchange="toggleCustomInput('orderPerRollQty', 'orderPerRollQtyCustom')"></select>
+                    <input type="text" id="orderPerRollQtyCustom" placeholder="Enter custom per roll qty" style="display:none; margin-top: 10px;">
+                </div>
+
+                <div class="form-group">
+                    <label>Core</label>
+                    <select id="orderCore" onchange="toggleCustomInput('orderCore', 'orderCoreCustom')"></select>
+                    <input type="text" id="orderCoreCustom" placeholder="Enter custom core size" style="display:none; margin-top: 10px;">
+                </div>
+
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="orderQuantity" placeholder="Enter quantity">
+                </div>
+
+                <button class="submit-btn" onclick="submitNewOrder()">
+                    <i class="fas fa-plus"></i> Add Order
+                </button>
+            </div>
+
+            <div class="section-title" style="padding: 0 5px;">
+                <i class="fas fa-list"></i>
+                <span>Order Booking List</span>
+            </div>
+            <div id="ordersListPanel">
+                <p style="text-align:center; color: var(--text-secondary); padding: 20px;">Loading orders...</p>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="adminOperators">
+            <div style="background: white; padding: 20px; border-radius: 20px; margin-bottom: 15px; box-shadow: var(--shadow);">
+                <div class="section-title" style="margin-bottom: 15px;">
+                    <i class="fas fa-user-edit"></i>
+                    <span>Add / Update Operator Profile</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Employee ID</label>
+                    <input type="text" id="opEmpId" placeholder="e.g. EMP2024001">
+                </div>
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="opName" placeholder="Operator name">
+                </div>
+                <div class="form-group">
+                    <label>Monthly Salary (₹)</label>
+                    <input type="number" id="opSalary" placeholder="e.g. 15000">
+                </div>
+                <div class="form-group">
+                    <label>Total OT Hours (this month)</label>
+                    <input type="number" id="opOtHours" placeholder="e.g. 12.5">
+                </div>
+                <div class="form-group">
+                    <label>Advance Given (₹)</label>
+                    <input type="number" id="opAdvance" placeholder="Total advance given">
+                </div>
+                <div class="form-group">
+                    <label>Monthly Deduction (₹)</label>
+                    <input type="number" id="opMonthlyDeduction" placeholder="Deducted per month">
+                </div>
+
+                <button class="submit-btn" onclick="saveOperatorProfile()">
+                    <i class="fas fa-save"></i> Save Profile
+                </button>
+            </div>
+
+            <div class="section-title" style="padding: 0 5px;">
+                <i class="fas fa-users"></i>
+                <span>All Operators</span>
+            </div>
+            <div id="operatorsListPanel">
+                <p style="text-align:center; color: var(--text-secondary); padding: 20px;">Loading operators...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav" id="bottomNav">
+        <div class="nav-item active" onclick="switchTab('home')">
+            <i class="fas fa-home"></i>
+            <span class="nav-label" id="navHome">Home</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('reports')">
+            <i class="fas fa-chart-bar"></i>
+            <span class="nav-label" id="navReports">Reports</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('training')">
+            <i class="fas fa-graduation-cap"></i>
+            <span class="nav-label" id="navTraining">Training</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('settings')">
+            <i class="fas fa-cog"></i>
+            <span class="nav-label" id="navSettings">Settings</span>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="productionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalProductionTitle">Production Report</h3>
+                <button class="close-btn" onclick="closeModal('productionModal')"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="form-group">
+                <label>Select Machine</label>
+                <div class="machine-grid" id="productionMachines">
+                    <div class="machine-option" onclick="selectMachine(this)">Blank Rotary</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Slitter</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Flat Belt</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Gumming</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Paper Slitter</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Single Colour</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Double Colour</div>
+                    <div class="machine-option" onclick="selectMachine(this)">4 Colour</div>
+                    <div class="machine-option" onclick="selectMachine(this)">6 Colour</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Packing</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Printer Installation</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Job ID</label>
+                <input type="text" id="prodJobId" placeholder="Enter Job ID">
+            </div>
+
+            <div class="form-group">
+                <label>Work Description</label>
+                <textarea id="prodDescription" placeholder="Describe the work done..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Quantity Produced</label>
+                <input type="number" id="prodQuantity" placeholder="Enter quantity">
+            </div>
+
+            <div class="form-group">
+                <label>Upload Photos (Auto GPS)</label>
+                <div class="photo-upload" onclick="simulatePhotoUpload(this)">
+                    <i class="fas fa-camera"></i>
+                    <div>Click to upload photo</div>
+                    <small style="color: var(--text-secondary);">GPS location will be captured</small>
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;" id="photoPreview"></div>
+            </div>
+
+            <button class="submit-btn" onclick="submitProductionReport()">
+                Submit Report
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="maintenanceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalMaintenanceTitle">Machine Maintenance</h3>
+                <button class="close-btn" onclick="closeModal('maintenanceModal')"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="form-group">
+                <label>Select Machine</label>
+                <div class="machine-grid" id="maintenanceMachines">
+                    <div class="machine-option" onclick="selectMachine(this)">Blank Rotary</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Slitter</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Flat Belt</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Gumming</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Paper Slitter</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Single Colour</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Double Colour</div>
+                    <div class="machine-option" onclick="selectMachine(this)">4 Colour</div>
+                    <div class="machine-option" onclick="selectMachine(this)">6 Colour</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Packing</div>
+                    <div class="machine-option" onclick="selectMachine(this)">Printer Installation</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Issue Type</label>
+                <select id="maintIssueType">
+                    <option>Breakdown</option>
+                    <option>Maintenance</option>
+                    <option>Not Working</option>
+                    <option>Noise</option>
+                    <option>Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Problem Description</label>
+                <textarea id="maintDescription" placeholder="Describe the issue..."></textarea>
+            </div>
+
+            <button class="submit-btn" onclick="submitMaintenanceRequest()">
+                Submit Request
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="materialModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalMaterialTitle">Material Request</h3>
+                <button class="close-btn" onclick="closeModal('materialModal')"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="form-group">
+                <label>Material Type</label>
+                <select id="matType">
+                    <option>Raw Material</option>
+                    <option>Ink</option>
+                    <option>Blade</option>
+                    <option>Cleaning Material</option>
+                    <option>Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Material Name</label>
+                <input type="text" id="matName" placeholder="Enter material name">
+            </div>
+
+            <div class="form-group">
+                <label>Quantity Required</label>
+                <input type="number" id="matQuantity" placeholder="Enter quantity">
+            </div>
+
+            <div class="form-group">
+                <label>Urgency Level</label>
+                <select id="matUrgency">
+                    <option>Low - Within 1 week</option>
+                    <option>Medium - Within 3 days</option>
+                    <option>High - Immediate</option>
+                </select>
+            </div>
+
+            <button class="submit-btn" onclick="submitMaterialRequest()">
+                Submit Request
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="machineJobModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="mjModalTitle">Select Machine</h3>
+                <button class="close-btn" onclick="closeMachineJobModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div id="mjMachineListView">
+                <div class="machine-grid" id="mjMachineGrid"></div>
+                <input type="text" id="mjMachineCustomInput" placeholder="Enter custom machine name" style="display:none; margin-top: 15px;">
+                <button id="mjMachineCustomSubmit" style="display:none; margin-top: 10px; width:100%;" class="submit-btn" onclick="submitCustomMachine()">Use This Machine</button>
+            </div>
+
+            <div id="mjJobListView" style="display:none;">
+                <button onclick="backToMachineList()" style="background:none; border:none; color:var(--primary); font-weight:600; margin-bottom:15px; cursor:pointer; font-size: 14px;">
+                    <i class="fas fa-arrow-left"></i> <span id="backToMachinesText">Back to Machines</span>
+                </button>
+                <h4 style="margin-bottom:10px;" id="mjSelectedMachineLabel"></h4>
+                <div class="training-list" id="mjJobsList"></div>
+            </div>
+
+            <div id="mjJobDetailView" style="display:none;">
+                <button onclick="backToJobList()" style="background:none; border:none; color:var(--primary); font-weight:600; margin-bottom:15px; cursor:pointer; font-size: 14px;">
+                    <i class="fas fa-arrow-left"></i> <span id="backToJobsText">Back to Jobs</span>
+                </button>
+                <div class="report-card" id="mjJobDetailCard"></div>
+
+                <div id="mjRunButtonWrap" style="display:none; margin-top:20px;">
+                    <button class="submit-btn" style="background: var(--success);" onclick="runJob()">
+                        <i class="fas fa-play"></i> <span id="jobRunText">Run This Job</span>
+                    </button>
+                </div>
+
+                <div id="mjActionButtons" style="display:none; gap:10px; margin-top:20px;">
+                    <button class="submit-btn" style="background: var(--success); flex:1;" onclick="startCompleteFlow()">
+                        <i class="fas fa-check"></i> <span id="jobCompleteText">Complete</span>
+                    </button>
+                    <button class="submit-btn" style="background: var(--danger); flex:1;" onclick="showIncompleteReason()">
+                        <i class="fas fa-times"></i> <span id="jobIncompleteText">Incomplete / Switch</span>
+                    </button>
+                </div>
+
+                <div id="mjIncompleteForm" style="display:none; margin-top:15px;">
+                    <div style="background:#fef3c7; color:#92400e; padding:10px 15px; border-radius:12px; font-size:12px; margin-bottom:15px;">
+                        <i class="fas fa-exclamation-triangle"></i> <span id="incompleteWarningText">Pending Qty and Reason are compulsory to switch or stop this job.</span>
+                    </div>
+                    <div class="form-group">
+                        <label id="pendingQtyLbl">Pending Quantity</label>
+                        <input type="number" id="mjPendingQty" placeholder="How much quantity is left?">
+                    </div>
+                    <div class="form-group">
+                        <label id="incompleteReasonLbl">Reason for Incomplete</label>
+                        <textarea id="mjIncompleteReason" placeholder="Why couldn't this job be completed?"></textarea>
+                    </div>
+                    <button class="submit-btn" onclick="submitIncomplete()">
+                        <span id="submitReasonText">Submit</span>
+                    </button>
+                </div>
+
+                <div id="mjCompleteForm" style="display:none; margin-top:15px;">
+                    <div class="form-group">
+                        <label id="qtyProducedLbl">Quantity Produced</label>
+                        <input type="number" id="mjQtyProduced" placeholder="Total quantity produced">
+                    </div>
+                    <button class="submit-btn" onclick="finalizeComplete()">
+                        <span id="submitCompleteText">Confirm Complete</span>
+                    </button>
+                </div>
+
+                <div id="mjPackingForm" style="display:none; margin-top:15px;">
+                    <div class="form-group">
+                        <label>Size</label>
+                        <select id="packSize" onchange="toggleCustomInput('packSize', 'packSizeCustom')"></select>
+                        <input type="text" id="packSizeCustom" placeholder="Enter custom size" style="display:none; margin-top: 10px;">
+                    </div>
+                    <div class="form-group">
+                        <label>No. of Rolls</label>
+                        <input type="number" id="packRolls" placeholder="Number of rolls packed">
+                    </div>
+                    <div class="form-group">
+                        <label>No. of Boxes</label>
+                        <input type="number" id="packBoxes" placeholder="Number of boxes packed">
+                    </div>
+                    <div class="form-group">
+                        <label>Customer Name</label>
+                        <input type="text" id="packCustomer" placeholder="Which customer is this for?">
+                    </div>
+                    <button class="submit-btn" onclick="finalizePackingComplete()">
+                        <span id="submitPackingText">Confirm Packing Complete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="operatorDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="odModalTitle">Operator Profile</h3>
+                <button class="close-btn" onclick="closeModal('operatorDetailModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="odContent">
+                <p style="text-align:center; color: var(--text-secondary); padding: 20px;">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="productionReportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="prModalTitle">Production Report - Today</h3>
+                <button class="close-btn" onclick="closeModal('productionReportModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; padding:10px 15px; border-radius:12px; font-size:12px; margin-bottom:15px;">
+                <i class="fas fa-info-circle"></i> <span id="prInfoText">Review your day's work below. Any correction you make here will be visible to admin as edited.</span>
+            </div>
+            <div id="prReportList"></div>
+            <button class="submit-btn" style="margin-top:15px;" onclick="submitProductionReportAndCheckout()">
+                <i class="fas fa-check-double"></i> <span id="prSubmitText">Confirm & Check Out</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="trainingModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTrainingTitle">Training Center</h3>
+                <button class="close-btn" onclick="closeModal('trainingModal')"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="training-list">
+                <div class="training-item">
+                    <div class="training-header">
+                        <span class="training-name">Mini Rotary Machine</span>
+                    </div>
+                    <div class="training-actions">
+                        <button class="action-btn btn-video" onclick="showToast('Opening YouTube Video...', 'info')">
+                            <i class="fas fa-play"></i> Video
+                        </button>
+                        <button class="action-btn btn-manual" onclick="showToast('Downloading Manual...', 'info')">
+                            <i class="fas fa-book"></i> Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="training-item">
+                    <div class="training-header">
+                        <span class="training-name">Slitting Machine</span>
+                    </div>
+                    <div class="training-actions">
+                        <button class="action-btn btn-video" onclick="showToast('Opening YouTube Video...', 'info')">
+                            <i class="fas fa-play"></i> Video
+                        </button>
+                        <button class="action-btn btn-manual" onclick="showToast('Downloading Manual...', 'info')">
+                            <i class="fas fa-book"></i> Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="training-item">
+                    <div class="training-header">
+                        <span class="training-name">Flat Belt Machine</span>
+                    </div>
+                    <div class="training-actions">
+                        <button class="action-btn btn-video" onclick="showToast('Opening YouTube Video...', 'info')">
+                            <i class="fas fa-play"></i> Video
+                        </button>
+                        <button class="action-btn btn-manual" onclick="showToast('Downloading Manual...', 'info')">
+                            <i class="fas fa-book"></i> Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="training-item">
+                    <div class="training-header">
+                        <span class="training-name">Gumming + Cutting</span>
+                    </div>
+                    <div class="training-actions">
+                        <button class="action-btn btn-video" onclick="showToast('Opening YouTube Video...', 'info')">
+                            <i class="fas fa-play"></i> Video
+                        </button>
+                        <button class="action-btn btn-manual" onclick="showToast('Downloading Manual...', 'info')">
+                            <i class="fas fa-book"></i> Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="training-item">
+                    <div class="training-header">
+                        <span class="training-name">Only Cutting</span>
+                    </div>
+                    <div class="training-actions">
+                        <button class="action-btn btn-video" onclick="showToast('Opening YouTube Video...', 'info')">
+                            <i class="fas fa-play"></i> Video
+                        </button>
+                        <button class="action-btn btn-manual" onclick="showToast('Downloading Manual...', 'info')">
+                            <i class="fas fa-book"></i> Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="training-item">
+                    <div class="training-header">
+                        <span class="training-name">Single Colour</span>
+                    </div>
+                    <div class="training-actions">
+                        <button class="action-btn btn-video" onclick="showToast('Opening YouTube Video...', 'info')">
+                            <i class="fas fa-play"></i> Video
+                        </button>
+                        <button class="action-btn btn-manual" onclick="showToast('Downloading Manual...', 'info')">
+                            <i class="fas fa-book"></i> Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="training-item">
+                    <div class="training-header">
+                        <span class="training-name">Double Colour</span>
+                    </div>
+                    <div class="training-actions">
+                        <button class="action-btn btn-video" onclick="showToast('Opening YouTube Video...', 'info')">
+                            <i class="fas fa-play"></i> Video
+                        </button>
+                        <button class="action-btn btn-manual" onclick="showToast('Downloading Manual...', 'info')">
+                            <i class="fas fa-book"></i> Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="training-item">
+                    <div class="training-header">
+                        <span class="training-name">Four Colour</span>
+                    </div>
+                    <div class="training-actions">
+                        <button class="action-btn btn-video" onclick="showToast('Opening YouTube Video...', 'info')">
+                            <i class="fas fa-play"></i> Video
+                        </button>
+                        <button class="action-btn btn-manual" onclick="showToast('Downloading Manual...', 'info')">
+                            <i class="fas fa-book"></i> Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="training-item">
+                    <div class="training-header">
+                        <span class="training-name">Six Colour</span>
+                    </div>
+                    <div class="training-actions">
+                        <button class="action-btn btn-video" onclick="showToast('Opening YouTube Video...', 'info')">
+                            <i class="fas fa-play"></i> Video
+                        </button>
+                        <button class="action-btn btn-manual" onclick="showToast('Downloading Manual...', 'info')">
+                            <i class="fas fa-book"></i> Manual
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="payslipModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalPayslipTitle">Payslip & Salary</h3>
+                <button class="close-btn" onclick="closeModal('payslipModal')"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="salary-card">
+                <div class="salary-header">
+                    <div class="salary-amount" id="payslipNetPay">₹18,600</div>
+                    <div class="salary-label">Net Pay - February 2024</div>
+                </div>
+                <div class="salary-breakdown">
+                    <div class="breakdown-row">
+                        <span>Basic Salary</span>
+                        <span id="payslipBasic">₹15,000</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span id="payslipOtLabel">OT Earnings (12.5 hrs)</span>
+                        <span id="payslipOt">+₹4,500</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span>Deductions</span>
+                        <span id="payslipDeductions">-₹900</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span>Net Pay</span>
+                        <span id="payslipNetPay2">₹18,600</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: white; border: 2px solid #e5e7eb; border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                <h4 style="margin-bottom: 15px; color: var(--text-primary);"><i class="fas fa-hand-holding-dollar" style="color: var(--primary);"></i> Advance & Deduction</h4>
+                <div class="status-row">
+                    <span>Advance Given</span>
+                    <strong id="payslipAdvanceGiven">₹0</strong>
+                </div>
+                <div class="status-row">
+                    <span>Monthly Deduction</span>
+                    <strong id="payslipMonthlyDeduction">₹0</strong>
+                </div>
+                <div class="status-row">
+                    <span>Total Deducted So Far</span>
+                    <strong id="payslipTotalDeducted">₹0</strong>
+                </div>
+                <div class="status-row">
+                    <span>Current Advance Balance</span>
+                    <strong id="payslipBalance" style="color: var(--danger);">₹0</strong>
+                </div>
+            </div>
+
+            <h4 style="margin-bottom: 15px; color: var(--text-primary);">Previous Months</h4>
+            <div class="history-list">
+                <div class="history-item">
+                    <div>
+                        <div style="font-weight: 700;">January 2024</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">₹17,200</div>
+                    </div>
+                    <button class="download-btn" onclick="showToast('Downloading PDF...', 'info')">
+                        <i class="fas fa-download"></i> PDF
+                    </button>
+                </div>
+                <div class="history-item">
+                    <div>
+                        <div style="font-weight: 700;">December 2023</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">₹19,100</div>
+                    </div>
+                    <button class="download-btn" onclick="showToast('Downloading PDF...', 'info')">
+                        <i class="fas fa-download"></i> PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="leaveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalLeaveTitle">Apply Leave</h3>
+                <button class="close-btn" onclick="closeModal('leaveModal')"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="leave-balance">
+                <div class="balance-card casual">
+                    <div class="balance-number">8</div>
+                    <div class="balance-type">Casual</div>
+                </div>
+                <div class="balance-card sick">
+                    <div class="balance-number">5</div>
+                    <div class="balance-type">Sick</div>
+                </div>
+                <div class="balance-card earned">
+                    <div class="balance-number">12</div>
+                    <div class="balance-type">Earned</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Leave Type</label>
+                <select id="leaveType">
+                    <option>Casual Leave</option>
+                    <option>Sick Leave</option>
+                    <option>Earned Leave</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>From Date</label>
+                <input type="date" id="leaveFrom">
+            </div>
+
+            <div class="form-group">
+                <label>To Date</label>
+                <input type="date" id="leaveTo">
+            </div>
+
+            <div class="form-group">
+                <label>Reason</label>
+                <textarea id="leaveReason" placeholder="Enter reason for leave..."></textarea>
+            </div>
+
+            <button class="submit-btn" onclick="submitLeaveApplication()">
+                Submit Application
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalHistoryTitle">Work History</h3>
+                <button class="close-btn" onclick="closeModal('historyModal')"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="calendar-grid">
+                <div class="calendar-day header">S</div>
+                <div class="calendar-day header">M</div>
+                <div class="calendar-day header">T</div>
+                <div class="calendar-day header">W</div>
+                <div class="calendar-day header">T</div>
+                <div class="calendar-day header">F</div>
+                <div class="calendar-day header">S</div>
+                
+                <div class="calendar-day"></div>
+                <div class="calendar-day"></div>
+                <div class="calendar-day"></div>
+                <div class="calendar-day"></div>
+                <div class="calendar-day present">1</div>
+                <div class="calendar-day present">2</div>
+                <div class="calendar-day present">3</div>
+                <div class="calendar-day present">4</div>
+                <div class="calendar-day present">5</div>
+                <div class="calendar-day present">6</div>
+                <div class="calendar-day present">7</div>
+                <div class="calendar-day present">8</div>
+                <div class="calendar-day present">9</div>
+                <div class="calendar-day absent">10</div>
+                <div class="calendar-day present">11</div>
+                <div class="calendar-day present">12</div>
+                <div class="calendar-day present">13</div>
+                <div class="calendar-day present">14</div>
+                <div class="calendar-day present">15</div>
+                <div class="calendar-day present">16</div>
+                <div class="calendar-day present">17</div>
+                <div class="calendar-day present">18</div>
+                <div class="calendar-day present">19</div>
+                <div class="calendar-day present">20</div>
+                <div class="calendar-day present">21</div>
+                <div class="calendar-day present">22</div>
+                <div class="calendar-day present">23</div>
+                <div class="calendar-day present">24</div>
+                <div class="calendar-day today present">25</div>
+                <div class="calendar-day">26</div>
+                <div class="calendar-day">27</div>
+                <div class="calendar-day">28</div>
+                <div class="calendar-day">29</div>
+            </div>
+
+            <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; font-size: 13px;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 12px; height: 12px; background: #d1fae5; border-radius: 3px;"></div>
+                    <span>Present</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 12px; height: 12px; background: #fee2e2; border-radius: 3px;"></div>
+                    <span>Absent</span>
+                </div>
+            </div>
+
+            <h4 style="margin-bottom: 15px;">Recent Work Log</h4>
+            <div class="history-list">
+                <div class="history-item">
+                    <div>
+                        <div style="font-weight: 700;">Feb 25, 2024</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">Single Color Machine - 450 units</div>
+                    </div>
+                    <span style="color: var(--success); font-weight: 600;">8 hrs</span>
+                </div>
+                <div class="history-item">
+                    <div>
+                        <div style="font-weight: 700;">Feb 24, 2024</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">Cutting Machine - 320 units</div>
+                    </div>
+                    <span style="color: var(--success); font-weight: 600;">8 hrs</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="reportsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalReportsTitle">Reports & OT</h3>
+                <button class="close-btn" onclick="closeModal('reportsModal')"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="report-card">
+                <div class="report-header">
+                    <span class="report-date">February 2024</span>
+                    <span class="report-status status-approved">Approved</span>
+                </div>
+                <div class="ot-hours">12.5 Hours</div>
+                <div class="ot-earnings">Earnings: ₹4,500</div>
+            </div>
+
+            <div class="report-card">
+                <div class="report-header">
+                    <span class="report-date">January 2024</span>
+                    <span class="report-status status-approved">Approved</span>
+                </div>
+                <div class="ot-hours">8.0 Hours</div>
+                <div class="ot-earnings">Earnings: ₹2,880</div>
+            </div>
+
+            <div class="report-card">
+                <div class="report-header">
+                    <span class="report-date">December 2023</span>
+                    <span class="report-status status-approved">Approved</span>
+                </div>
+                <div class="ot-hours">15.0 Hours</div>
+                <div class="ot-earnings">Earnings: ₹5,400</div>
+            </div>
+
+            <div class="report-card">
+                <div class="report-header">
+                    <span class="report-date">February 20, 2024</span>
+                    <span class="report-status status-pending">Pending</span>
+                </div>
+                <div style="margin-top: 10px; font-size: 14px; color: var(--text-secondary);">
+                    Requested: 2.5 hours (Emergency work)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tap-loading-overlay" id="tapLoadingOverlay">
+        <div class="spinner" style="border-color: rgba(99,102,241,0.3); border-top-color: var(--primary); width: 36px; height: 36px; border-width: 4px;"></div>
+    </div>
+
+    <div class="toast" id="toast">
+        <div class="toast-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="toast-content">
+            <div class="toast-title">Success</div>
+            <div class="toast-message">Operation completed successfully</div>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            en: {
+                loginTitle: "Worker Portal",
+                loginSubtitle: "Sign in to your account",
+                roleWorker: "Worker",
+                roleAdmin: "Admin",
+                labelEmpId: "Employee ID",
+                labelPassword: "Password",
+                loginBtnText: "Login",
+                statusLabel: "CURRENT STATUS",
+                btnCheckIn: "CHECK IN",
+                btnCheckOut: "CHECK OUT",
+                statPresent: "Present Days",
+                statAbsent: "Absent Days",
+                statOT: "Total OT Hours",
+                statSalary: "This Month Salary",
+                todayStatusTitle: "Today's Status",
+                shiftLabel: "Shift Time",
+                currentStatusLabel: "Current Status",
+                quickAccessTitle: "Quick Access",
+                menuProduction: "Production<br>Report",
+                menuMaintenance: "Machine<br>Maintenance",
+                menuMaterial: "Material<br>Request",
+                menuTraining: "Training<br>Center",
+                menuPayslip: "Payslip &<br>Salary",
+                menuLeave: "Apply<br>Leave",
+                menuHistory: "Work<br>History",
+                menuReports: "Reports &<br>OT",
+                navHome: "Home",
+                navReports: "Reports",
+                navTraining: "Training",
+                navSettings: "Settings",
+                modalProductionTitle: "Production Report",
+                modalMaintenanceTitle: "Machine Maintenance",
+                modalMaterialTitle: "Material Request",
+                modalTrainingTitle: "Training Center",
+                modalPayslipTitle: "Payslip & Salary",
+                modalLeaveTitle: "Apply Leave",
+                modalHistoryTitle: "Work History",
+                modalReportsTitle: "Reports & OT"
+            },
+            mr: {
+                loginTitle: "कामगार पोर्टल",
+                loginSubtitle: "तुमच्या खात्यात साइन इन करा",
+                roleWorker: "कामगार",
+                roleAdmin: "प्रशासक",
+                labelEmpId: "कर्मचारी आयडी",
+                labelPassword: "पासवर्ड",
+                loginBtnText: "लॉगिन",
+                statusLabel: "सद्य स्थिती",
+                btnCheckIn: "चेक इन",
+                btnCheckOut: "चेक आउट",
+                statPresent: "उपस्थित दिवस",
+                statAbsent: "अनुपस्थित दिवस",
+                statOT: "एकूण तास",
+                statSalary: "या महिन्याचा पगार",
+                todayStatusTitle: "आजची स्थिती",
+                shiftLabel: "शिफ्ट वेळ",
+                currentStatusLabel: "सद्य स्थिती",
+                quickAccessTitle: "जलद प्रवेश",
+                menuProduction: "उत्पादन<br>अहवाल",
+                menuMaintenance: "मशीन<br>देखभाल",
+                menuMaterial: "साहित्य<br>विनंती",
+                menuTraining: "प्रशिक्षण<br>केंद्र",
+                menuPayslip: "पेस्लिप आणि<br>पगार",
+                menuLeave: "रजा<br>अर्ज",
+                menuHistory: "काम<br>इतिहास",
+                menuReports: "अहवाल आणि<br>ओटी",
+                navHome: "होम",
+                navReports: "अहवाल",
+                navTraining: "प्रशिक्षण",
+                navSettings: "सेटिंग्ज",
+                modalProductionTitle: "उत्पादन अहवाल",
+                modalMaintenanceTitle: "मशीन देखभाल",
+                modalMaterialTitle: "साहित्य विनंती",
+                modalTrainingTitle: "प्रशिक्षण केंद्र",
+                modalPayslipTitle: "पेस्लिप आणि पगार",
+                modalLeaveTitle: "रजा अर्ज",
+                modalHistoryTitle: "काम इतिहास",
+                modalReportsTitle: "अहवाल आणि ओटी"
+            }
+        };
+
+        let currentLang = 'en';
+        let isCheckedIn = false;
+        let checkInTime = null;
+        let selectedRole = 'worker';
+        let currentUser = { empId: null, role: 'worker' };
+        let watchId = null;
+        let onFieldDuty = false;
+        let gpsLostTimer = null;
+        const GPS_LOST_GRACE_MS = 30000; // 30s grace period before auto checkout
+
+        // Company reference location - update with actual factory GPS coordinates
+        const COMPANY_LOCATION = { lat: 18.5793, lng: 73.7466, radius: 200 }; // radius in meters
+
+        function haversineDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371000;
+            const toRad = deg => deg * Math.PI / 180;
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function startLocationTracking() {
+            if (!navigator.geolocation) {
+                showToast(currentLang === 'en' ? 'GPS not supported on this device' : 'या डिव्हाइसवर जीपीएस उपलब्ध नाही', 'error');
+                return;
+            }
+            document.getElementById('fieldDutyBtn').style.display = 'block';
+            watchId = navigator.geolocation.watchPosition(handleLocationUpdate, handleLocationError, {
+                enableHighAccuracy: true,
+                maximumAge: 15000,
+                timeout: 20000
+            });
+        }
+
+        function stopLocationTracking() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            if (gpsLostTimer) {
+                clearTimeout(gpsLostTimer);
+                gpsLostTimer = null;
+            }
+            document.getElementById('locationBadge').style.display = 'none';
+            document.getElementById('fieldDutyBtn').style.display = 'none';
+            onFieldDuty = false;
+        }
+
+        async function handleLocationUpdate(position) {
+            if (gpsLostTimer) {
+                clearTimeout(gpsLostTimer);
+                gpsLostTimer = null;
+            }
+
+            const { latitude, longitude, accuracy } = position.coords;
+            const distance = haversineDistance(latitude, longitude, COMPANY_LOCATION.lat, COMPANY_LOCATION.lng);
+            const isOnSite = distance <= COMPANY_LOCATION.radius;
+
+            const locationData = {
+                empId: currentUser.empId,
+                lat: latitude,
+                lng: longitude,
+                accuracy: Math.round(accuracy),
+                distance: Math.round(distance),
+                isOnSite,
+                fieldDuty: onFieldDuty,
+                status: 'active',
+                timestamp: new Date().toISOString()
+            };
+
+            updateLocationBadge(locationData);
+            await saveData(`liveLocation:${currentUser.empId}`, locationData, true);
+
+            const logKey = `locationLog:${currentUser.empId}:${todayStr()}`;
+            const log = (await loadData(logKey, false)) || [];
+            log.push(locationData);
+            if (log.length > 300) log.shift();
+            await saveData(logKey, log, false);
+
+            if (mjSelectedMachine === 'Printer Installation' && mjSelectedJob && mjSelectedJob.status === 'in-progress') {
+                const tripKey = `fieldTrip:${currentUser.empId}:${todayStr()}`;
+                const trip = (await loadData(tripKey, true)) || { empId: currentUser.empId, jobId: mjSelectedJob.id, points: [], ended: false };
+                trip.points.push({ lat: latitude, lng: longitude, timestamp: locationData.timestamp });
+                if (trip.points.length > 500) trip.points.shift();
+                await saveData(tripKey, trip, true);
+            }
+        }
+
+        function handleLocationError(err) {
+            const badge = document.getElementById('locationBadge');
+            if (badge) {
+                badge.style.display = 'block';
+                badge.style.background = '#fee2e2';
+                badge.style.color = '#991b1b';
+                badge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${currentLang === 'en' ? 'GPS signal lost...' : 'जीपीएस सिग्नल गेला...'}`;
+            }
+
+            if (!GEOFENCE_ENABLED) return; // trial mode: don't auto checkout on GPS loss
+
+            if (isCheckedIn && !gpsLostTimer) {
+                showToast(currentLang === 'en' ? 'GPS signal lost! Auto checkout in 30s if not restored.' : 'जीपीएस सिग्नल गेला! 30 सेकंदात आपोआप चेक-आउट होईल.', 'error');
+                gpsLostTimer = setTimeout(() => {
+                    gpsLostTimer = null;
+                    if (isCheckedIn) {
+                        autoCheckout('GPS turned off or permission revoked');
+                    }
+                }, GPS_LOST_GRACE_MS);
+            }
+        }
+
+        async function autoCheckout(reason) {
+            if (!isCheckedIn) return;
+            isCheckedIn = false;
+            const checkOutTime = new Date();
+            document.getElementById('currentStatus').textContent = currentLang === 'en' ? 'Auto Checked Out' : 'आपोआप चेक-आउट';
+            document.getElementById('currentStatus').classList.add('checked-out');
+            document.getElementById('statusTime').textContent = checkOutTime.toLocaleTimeString();
+            document.getElementById('checkInBtn').disabled = false;
+            document.getElementById('checkOutBtn').disabled = true;
+            updateWorkStatus();
+            await saveData(attendanceKey(), {
+                isCheckedIn: false,
+                checkInTime: checkInTime ? checkInTime.toISOString() : null,
+                checkOutTime: checkOutTime.toISOString(),
+                autoCheckout: true,
+                reason
+            }, false);
+            stopLocationTracking();
+            await saveData(`liveLocation:${currentUser.empId}`, {
+                empId: currentUser.empId,
+                status: 'auto-checked-out',
+                reason,
+                timestamp: checkOutTime.toISOString()
+            }, true);
+            document.getElementById('machineJobCard').style.display = 'none';
+            mjSelectedMachine = null;
+            mjSelectedJob = null;
+            await saveData(`currentAssignment:${currentUser.empId}`, null, true);
+            showToast(currentLang === 'en' ? `Auto checked out - ${reason}` : `आपोआप चेक-आउट - ${reason}`, 'error');
+        }
+
+        function updateLocationBadge(data) {
+            const badge = document.getElementById('locationBadge');
+            if (!badge) return;
+            badge.style.display = 'block';
+            const km = (data.distance / 1000).toFixed(2);
+            if (data.isOnSite) {
+                badge.style.background = '#d1fae5';
+                badge.style.color = '#065f46';
+                badge.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${currentLang === 'en' ? 'On-site at Factory' : 'फॅक्टरीत उपस्थित'}`;
+            } else if (data.fieldDuty) {
+                badge.style.background = '#fef3c7';
+                badge.style.color = '#92400e';
+                badge.innerHTML = `<i class="fas fa-route"></i> ${currentLang === 'en' ? 'On Field Duty' : 'फील्ड ड्युटीवर'} - ${km} km ${currentLang === 'en' ? 'from factory' : 'फॅक्टरीपासून'}`;
+            } else {
+                badge.style.background = '#fee2e2';
+                badge.style.color = '#991b1b';
+                badge.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${currentLang === 'en' ? 'Off-site (unexplained)' : 'साइटच्या बाहेर (अस्पष्ट)'} - ${km} km`;
+            }
+        }
+
+        function toggleFieldDuty() {
+            onFieldDuty = !onFieldDuty;
+            const btnText = document.getElementById('fieldDutyBtnText');
+            if (onFieldDuty) {
+                btnText.textContent = currentLang === 'en' ? 'On Field Duty - Tap to End' : 'फील्ड ड्युटीवर - संपवण्यासाठी टॅप करा';
+                showToast(currentLang === 'en' ? 'Marked as Field Duty' : 'फील्ड ड्युटी म्हणून चिन्हांकित', 'info');
+            } else {
+                btnText.textContent = currentLang === 'en' ? 'Mark Field Duty (Going Off-site for Work)' : 'फील्ड ड्युटी चिन्हांकित करा';
+                showToast(currentLang === 'en' ? 'Field Duty ended' : 'फील्ड ड्युटी संपली', 'info');
+            }
+        }
+
+        // ---- Persistent Storage Helpers ----
+        function showLoadingOverlay() {
+            const el = document.getElementById('tapLoadingOverlay');
+            if (el) el.classList.add('show');
+        }
+
+        function hideLoadingOverlay() {
+            const el = document.getElementById('tapLoadingOverlay');
+            if (el) el.classList.remove('show');
+        }
+
+        function hasStorage() {
+            return typeof window.storage !== 'undefined';
+        }
+
+        async function saveData(key, value, shared = false) {
+            if (!hasStorage()) return;
+            try {
+                await window.storage.set(key, JSON.stringify(value), shared);
+            } catch (e) {
+                console.error('Save failed:', key, e);
+            }
+        }
+
+        async function loadData(key, shared = false) {
+            if (!hasStorage()) return null;
+            try {
+                const result = await window.storage.get(key, shared);
+                return result ? JSON.parse(result.value) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function todayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+        }
+
+        function attendanceKey() {
+            return `attendance:${currentUser.empId}:${todayStr()}`;
+        }
+
+        async function loadSubmissions() {
+            const data = await loadData('submissions', true);
+            return data || [];
+        }
+
+        async function addSubmission(type, details) {
+            const list = await loadSubmissions();
+            const entry = {
+                id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                type,
+                empId: currentUser.empId || 'unknown',
+                status: 'pending',
+                timestamp: new Date().toISOString(),
+                details
+            };
+            list.push(entry);
+            await saveData('submissions', list, true);
+            return entry;
+        }
+
+        async function updateSubmissionStatus(id, status) {
+            const list = await loadSubmissions();
+            const item = list.find(s => s.id === id);
+            if (item) item.status = status;
+            await saveData('submissions', list, true);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: true, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+            const clockEl = document.getElementById('liveClock');
+            if (clockEl) {
+                clockEl.textContent = timeString;
+            }
+            const adminClockEl = document.getElementById('adminClock');
+            if (adminClockEl) {
+                adminClockEl.textContent = timeString;
+            }
+            updateWorkStatus();
+        }
+        setInterval(updateClock, 1000);
+
+        function updateWorkStatus() {
+            const hour = new Date().getHours();
+            const statusEl = document.getElementById('workStatus');
+            const statusText = document.getElementById('workStatusText');
+            
+            if (!statusEl || !statusText) return;
+            
+            if (!isCheckedIn) {
+                statusEl.className = 'status-indicator status-ended';
+                statusText.textContent = currentLang === 'en' ? 'Not Started' : 'सुरू केले नाही';
+            } else if (hour >= 9 && hour < 13) {
+                statusEl.className = 'status-indicator status-working';
+                statusText.textContent = currentLang === 'en' ? 'Working' : 'काम सुरू';
+            } else if (hour >= 13 && hour < 14) {
+                statusEl.className = 'status-indicator status-break';
+                statusText.textContent = currentLang === 'en' ? 'Break Time' : 'जेवणाची सुट्टी';
+            } else if (hour >= 14 && hour < 17) {
+                statusEl.className = 'status-indicator status-working';
+                statusText.textContent = currentLang === 'en' ? 'Working' : 'काम सुरू';
+            } else {
+                statusEl.className = 'status-indicator status-ended';
+                statusText.textContent = currentLang === 'en' ? 'Shift Ended' : 'शिफ्ट संपली';
+            }
+        }
+
+        async function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'mr' : 'en';
+            document.getElementById('langText').textContent = currentLang === 'en' ? 'English' : 'मराठी';
+            updateLanguage();
+            await saveData('lang', currentLang, false);
+            showToast(currentLang === 'en' ? 'Language changed to English' : 'भाषा मराठीत बदलली', 'success');
+        }
+
+        function updateLanguage() {
+            const texts = translations[currentLang];
+            for (const [key, value] of Object.entries(texts)) {
+                const el = document.getElementById(key);
+                if (el) {
+                    if (key.includes('menu') || key.includes('btn')) {
+                        el.innerHTML = value;
+                    } else {
+                        el.textContent = value;
+                    }
+                }
+            }
+            updateWorkStatus();
+        }
+
+        function selectRole(role) {
+            selectedRole = role;
+            document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                login();
+            }
+        }
+
+        function login() {
+            const empId = document.getElementById('empId').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            if (!empId || !password) {
+                errorText.textContent = currentLang === 'en' ? 'Please enter Employee ID and Password' : 'कृपया कर्मचारी आयडी आणि पासवर्ड टाका';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            errorDiv.classList.remove('show');
+            
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="spinner"></span> Logging in...';
+            
+            currentUser = { empId, role: selectedRole };
+            
+            setTimeout(async () => {
+                await saveData('session', currentUser, false);
+                
+                const loginScreen = document.getElementById('loginScreen');
+                const mainApp = document.getElementById('mainApp');
+                const adminApp = document.getElementById('adminApp');
+                const bottomNav = document.getElementById('bottomNav');
+                
+                loginScreen.classList.add('hidden');
+                
+                setTimeout(async () => {
+                    if (selectedRole === 'admin') {
+                        adminApp.classList.add('active');
+                        await loadAdminData();
+                    } else {
+                        mainApp.classList.add('active');
+                        bottomNav.classList.add('show');
+                        await restoreAttendanceState();
+                    }
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = '<span id="loginBtnText">Login</span>';
+                    updateLanguage();
+                    showToast(currentLang === 'en' ? 'Welcome back!' : 'पुन्हा स्वागत आहे!', 'success');
+                }, 500);
+            }, 1500);
+        }
+
+        async function logout() {
+            await saveData('session', null, false);
+            document.getElementById('mainApp').classList.remove('active');
+            document.getElementById('adminApp').classList.remove('active');
+            document.getElementById('bottomNav').classList.remove('show');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('empId').value = '';
+            document.getElementById('password').value = '';
+            isCheckedIn = false;
+            checkInTime = null;
+            currentUser = { empId: null, role: 'worker' };
+            showToast(currentLang === 'en' ? 'Logged out' : 'लॉगआउट झाले', 'info');
+        }
+
+        async function restoreAttendanceState() {
+            const state = await loadData(attendanceKey(), false);
+            if (!state) return;
+            isCheckedIn = state.isCheckedIn;
+            checkInTime = state.checkInTime ? new Date(state.checkInTime) : null;
+            const statusEl = document.getElementById('currentStatus');
+            const timeEl = document.getElementById('statusTime');
+            if (isCheckedIn && checkInTime) {
+                statusEl.textContent = currentLang === 'en' ? 'Checked In' : 'चेक इन केले';
+                statusEl.classList.remove('checked-out');
+                timeEl.textContent = checkInTime.toLocaleTimeString();
+                document.getElementById('checkInBtn').disabled = true;
+                document.getElementById('checkOutBtn').disabled = false;
+            } else if (state.checkOutTime) {
+                statusEl.textContent = currentLang === 'en' ? 'Checked Out' : 'चेक आउट केले';
+                statusEl.classList.add('checked-out');
+                timeEl.textContent = new Date(state.checkOutTime).toLocaleTimeString();
+                document.getElementById('checkInBtn').disabled = false;
+                document.getElementById('checkOutBtn').disabled = true;
+            }
+            updateWorkStatus();
+            if (isCheckedIn) {
+                startLocationTracking();
+                document.getElementById('machineJobCard').style.display = 'block';
+                const assignment = await loadData(`currentAssignment:${currentUser.empId}`, true);
+                if (assignment && assignment.machine) {
+                    mjSelectedMachine = assignment.machine;
+                    if (assignment.jobId) {
+                        const jobs = await loadJobs();
+                        mjSelectedJob = jobs.find(j => j.id === assignment.jobId) || null;
+                    }
+                    updateMachineJobCard();
+                }
+            }
+        }
+
+        // TRIAL MODE: set to true once operators are checking in from the actual factory location.
+        // While false, check-in works from anywhere (location is still recorded, just not enforced).
+        const GEOFENCE_ENABLED = false;
+
+        async function checkIn() {
+            const checkInBtn = document.getElementById('checkInBtn');
+            const originalHTML = checkInBtn.innerHTML;
+            checkInBtn.disabled = true;
+            checkInBtn.innerHTML = '<span class="spinner"></span> ' + (currentLang === 'en' ? 'Checking in...' : 'चेक इन करत आहे...');
+
+            const proceedCheckIn = async () => {
+                isCheckedIn = true;
+                checkInTime = new Date();
+                document.getElementById('currentStatus').textContent = currentLang === 'en' ? 'Checked In' : 'चेक इन केले';
+                document.getElementById('currentStatus').classList.remove('checked-out');
+                document.getElementById('statusTime').textContent = checkInTime.toLocaleTimeString();
+                checkInBtn.innerHTML = originalHTML;
+                document.getElementById('checkOutBtn').disabled = false;
+                updateWorkStatus();
+                await saveData(attendanceKey(), { isCheckedIn: true, checkInTime: checkInTime.toISOString(), checkOutTime: null }, false);
+                startLocationTracking();
+
+                document.getElementById('machineJobCard').style.display = 'block';
+                mjSelectedMachine = null;
+                mjSelectedJob = null;
+                updateMachineJobCard();
+                await seedJobsIfEmpty();
+                openMachineJobModal();
+
+                showToast(currentLang === 'en' ? 'Successfully Checked In!' : 'यशस्वीरित्या चेक इन केले!', 'success');
+            };
+
+            if (!navigator.geolocation) {
+                if (GEOFENCE_ENABLED) {
+                    checkInBtn.disabled = false;
+                    checkInBtn.innerHTML = originalHTML;
+                    showToast(currentLang === 'en' ? 'GPS not supported on this device. Cannot check in.' : 'या डिव्हाइसवर जीपीएस उपलब्ध नाही. चेक-इन शक्य नाही.', 'error');
+                    return;
+                }
+                await proceedCheckIn();
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    const distance = haversineDistance(latitude, longitude, COMPANY_LOCATION.lat, COMPANY_LOCATION.lng);
+
+                    if (GEOFENCE_ENABLED && distance > COMPANY_LOCATION.radius) {
+                        checkInBtn.disabled = false;
+                        checkInBtn.innerHTML = originalHTML;
+                        const km = (distance / 1000).toFixed(2);
+                        showToast(
+                            currentLang === 'en'
+                                ? `Check-in denied - you are ${km} km from the factory. You must be at the company location.`
+                                : `चेक-इन नाकारले - तुम्ही फॅक्टरीपासून ${km} किमी दूर आहात.`,
+                            'error'
+                        );
+                        return;
+                    }
+
+                    await proceedCheckIn();
+                },
+                async (err) => {
+                    if (GEOFENCE_ENABLED) {
+                        checkInBtn.disabled = false;
+                        checkInBtn.innerHTML = originalHTML;
+                        showToast(
+                            currentLang === 'en'
+                                ? 'Location access denied. GPS must be enabled to check in.'
+                                : 'लोकेशन नाकारले. चेक-इनसाठी जीपीएस सुरू असणे आवश्यक आहे.',
+                            'error'
+                        );
+                        return;
+                    }
+                    // Trial mode: GPS failed but check-in proceeds anyway
+                    await proceedCheckIn();
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+
+        async function checkOut(suppressToast) {
+            isCheckedIn = false;
+            const checkOutTime = new Date();
+            document.getElementById('currentStatus').textContent = currentLang === 'en' ? 'Checked Out' : 'चेक आउट केले';
+            document.getElementById('currentStatus').classList.add('checked-out');
+            document.getElementById('statusTime').textContent = checkOutTime.toLocaleTimeString();
+            document.getElementById('checkInBtn').disabled = false;
+            document.getElementById('checkOutBtn').disabled = true;
+            updateWorkStatus();
+            await saveData(attendanceKey(), { isCheckedIn: false, checkInTime: checkInTime ? checkInTime.toISOString() : null, checkOutTime: checkOutTime.toISOString() }, false);
+            stopLocationTracking();
+            await saveData(`liveLocation:${currentUser.empId}`, { empId: currentUser.empId, status: 'checked-out', timestamp: checkOutTime.toISOString() }, true);
+            document.getElementById('machineJobCard').style.display = 'none';
+            mjSelectedMachine = null;
+            mjSelectedJob = null;
+            await saveData(`currentAssignment:${currentUser.empId}`, null, true);
+            if (!suppressToast) {
+                showToast(currentLang === 'en' ? 'Successfully Checked Out!' : 'यशस्वीरित्या चेक आउट केले!', 'success');
+            }
+        }
+
+        // ---- Production Report (replaces manual checkout) ----
+        async function getTodaysJobActivity(empId) {
+            const jobs = await loadJobs();
+            const today = todayStr();
+            return jobs.filter(j => {
+                const relevant = j.runBy === empId || j.completedBy === empId || j.markedBy === empId;
+                if (!relevant) return false;
+                const ts = j.completedAt || j.markedAt || j.runStartedAt;
+                if (!ts) return false;
+                const d = new Date(ts);
+                const dStr = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+                return dStr === today;
+            });
+        }
+
+        async function openProductionReportModal() {
+            showLoadingOverlay();
+            const activity = await getTodaysJobActivity(currentUser.empId);
+            const listEl = document.getElementById('prReportList');
+
+            if (activity.length === 0) {
+                listEl.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 20px;">${currentLang === 'en' ? 'No production activity recorded today.' : 'आज कोणतेही काम नोंदवलेले नाही.'}</p>`;
+            } else {
+                listEl.innerHTML = activity.map(j => {
+                    const isCompleted = j.status === 'completed';
+                    const statusLabel = isCompleted ? (currentLang === 'en' ? 'Completed' : 'पूर्ण') : j.status === 'incomplete' ? (currentLang === 'en' ? 'Incomplete' : 'अपूर्ण') : (currentLang === 'en' ? 'Still Running' : 'अजून सुरू');
+                    const isInstall = j.machine === 'Printer Installation';
+                    const qtyVal = isCompleted ? (j.qtyProduced ?? '') : (j.pendingQty ?? '');
+                    const qtyLabel = isCompleted ? (currentLang === 'en' ? 'Qty Produced' : 'उत्पादित प्रमाण') : (currentLang === 'en' ? 'Pending Qty' : 'प्रलंबित प्रमाण');
+                    let extra = '';
+                    if (j.packing) {
+                        extra += `<div style="font-size:12px; color:var(--text-secondary); margin-top:6px;">${currentLang === 'en' ? 'Packing' : 'पॅकिंग'}: ${j.packing.rolls} rolls, ${j.packing.boxes} boxes, ${currentLang === 'en' ? 'Size' : 'आकार'} ${j.packing.size}, ${currentLang === 'en' ? 'Customer' : 'ग्राहक'}: ${j.packing.customer}</div>`;
+                    }
+                    if (isInstall) {
+                        extra += `<div style="font-size:12px; color:var(--text-secondary); margin-top:6px;">${currentLang === 'en' ? 'Customer' : 'ग्राहक'}: ${j.customerName || '-'} · ${j.jobType}${j.jobType === 'Maintenance' ? ' - ' + (j.issue || '') : ''}</div>`;
+                    }
+                    if (j.incompleteReason) {
+                        extra += `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${currentLang === 'en' ? 'Reason' : 'कारण'}: ${j.incompleteReason}</div>`;
+                    }
+                    return `
+                    <div class="training-item">
+                        <div class="training-header">
+                            <span class="training-name">${j.machine} - ${j.jobId}</span>
+                            <span class="report-status ${isCompleted ? 'status-approved' : 'status-pending'}">${statusLabel}</span>
+                        </div>
+                        ${isInstall ? '' : `
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="font-size:12px;">${qtyLabel} <span class="pr-edited-flag" style="display:none; color:var(--danger); font-weight:600;">(${currentLang === 'en' ? 'edited' : 'सुधारित'})</span></label>
+                            <input type="number" data-job-id="${j.id}" data-original="${qtyVal}" value="${qtyVal}" class="pr-qty-input" oninput="markEdited(this)">
+                        </div>`}
+                        ${extra}
+                    </div>`;
+                }).join('');
+            }
+
+            openModal('productionReportModal');
+            hideLoadingOverlay();
+        }
+
+        function markEdited(input) {
+            const original = input.dataset.original;
+            const flag = input.closest('.form-group').querySelector('.pr-edited-flag');
+            if (flag) flag.style.display = String(input.value) !== String(original) ? 'inline' : 'none';
+        }
+
+        async function submitProductionReportAndCheckout() {
+            const inputs = document.querySelectorAll('.pr-qty-input');
+            const jobs = await loadJobs();
+            const reportEntries = [];
+
+            inputs.forEach(input => {
+                const jobId = input.dataset.jobId;
+                const original = input.dataset.original;
+                const newVal = input.value;
+                const edited = String(newVal) !== String(original);
+                const job = jobs.find(j => j.id === jobId);
+                if (job) {
+                    if (job.status === 'completed') {
+                        job.qtyProduced = newVal;
+                        if (edited) job.qtyEdited = true;
+                    } else if (job.status === 'incomplete') {
+                        job.pendingQty = newVal;
+                        if (edited) job.qtyEdited = true;
+                    }
+                    reportEntries.push({
+                        jobId: job.id, machine: job.machine, jobCode: job.jobId,
+                        status: job.status, qty: newVal, originalQty: original, edited
+                    });
+                }
+            });
+
+            await saveJobs(jobs);
+            await saveData(`productionReport:${currentUser.empId}:${todayStr()}`, {
+                empId: currentUser.empId,
+                date: todayStr(),
+                entries: reportEntries,
+                submittedAt: new Date().toISOString()
+            }, true);
+
+            if (mjSelectedMachine === 'Printer Installation') {
+                await finalizeFieldTrip();
+            }
+
+            closeModal('productionReportModal');
+            await checkOut(true);
+            showToast(currentLang === 'en' ? 'Production report submitted and checked out!' : 'उत्पादन अहवाल सादर आणि चेक-आउट झाले!', 'success');
+        }
+
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+
+        function selectMachine(el) {
+            const parent = el.parentElement;
+            parent.querySelectorAll('.machine-option').forEach(opt => opt.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        let photoCount = 0;
+        function simulatePhotoUpload(el) {
+            if (photoCount >= 3) {
+                showToast(currentLang === 'en' ? 'Maximum 3 photos allowed' : 'कमाल 3 फोटो परवानगी आहे', 'error');
+                return;
+            }
+            
+            el.innerHTML = '<div class="spinner" style="border-color: var(--primary); border-top-color: transparent;"></div><div>Uploading...</div>';
+            
+            setTimeout(() => {
+                photoCount++;
+                el.innerHTML = '<i class="fas fa-camera"></i><div>Click to upload photo</div><small style="color: var(--text-secondary);">GPS location will be captured</small>';
+                
+                const preview = document.getElementById('photoPreview');
+                const img = document.createElement('div');
+                img.style.cssText = 'width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; position: relative;';
+                img.innerHTML = '<i class="fas fa-image"></i><div style="position: absolute; bottom: 5px; right: 5px; background: var(--success); width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px;"><i class="fas fa-check"></i></div>';
+                preview.appendChild(img);
+                
+                showToast(currentLang === 'en' ? 'Photo uploaded with GPS' : 'जीपीएससह फोटो अपलोड केला', 'success');
+            }, 1500);
+        }
+
+        function submitForm(message) {
+            showToast(message, 'success');
+            setTimeout(() => {
+                document.querySelectorAll('.modal-overlay').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+                document.body.style.overflow = '';
+            }, 1000);
+        }
+
+        function getSelectedMachine(gridId) {
+            const grid = document.getElementById(gridId);
+            const selected = grid ? grid.querySelector('.machine-option.selected') : null;
+            return selected ? selected.textContent.trim() : null;
+        }
+
+        async function submitProductionReport() {
+            const machine = getSelectedMachine('productionMachines');
+            const jobId = document.getElementById('prodJobId').value.trim();
+            const description = document.getElementById('prodDescription').value.trim();
+            const quantity = document.getElementById('prodQuantity').value.trim();
+
+            if (!machine || !jobId || !quantity) {
+                showToast(currentLang === 'en' ? 'Please fill machine, job ID and quantity' : 'कृपया मशीन, जॉब आयडी आणि प्रमाण भरा', 'error');
+                return;
+            }
+
+            await addSubmission('production', { machine, jobId, description, quantity });
+            document.getElementById('prodJobId').value = '';
+            document.getElementById('prodDescription').value = '';
+            document.getElementById('prodQuantity').value = '';
+            photoCount = 0;
+            document.getElementById('photoPreview').innerHTML = '';
+            submitForm(currentLang === 'en' ? 'Production report submitted successfully!' : 'उत्पादन अहवाल यशस्वीरित्या सादर झाला!');
+        }
+
+        async function submitMaintenanceRequest() {
+            const machine = getSelectedMachine('maintenanceMachines');
+            const issueType = document.getElementById('maintIssueType').value;
+            const description = document.getElementById('maintDescription').value.trim();
+
+            if (!machine) {
+                showToast(currentLang === 'en' ? 'Please select a machine' : 'कृपया मशीन निवडा', 'error');
+                return;
+            }
+
+            await addSubmission('maintenance', { machine, issueType, description });
+            document.getElementById('maintDescription').value = '';
+            submitForm(currentLang === 'en' ? 'Maintenance request submitted!' : 'देखभाल विनंती सादर झाली!');
+        }
+
+        async function submitMaterialRequest() {
+            const matType = document.getElementById('matType').value;
+            const matName = document.getElementById('matName').value.trim();
+            const quantity = document.getElementById('matQuantity').value.trim();
+            const urgency = document.getElementById('matUrgency').value;
+
+            if (!matName || !quantity) {
+                showToast(currentLang === 'en' ? 'Please fill material name and quantity' : 'कृपया साहित्य नाव आणि प्रमाण भरा', 'error');
+                return;
+            }
+
+            await addSubmission('material', { matType, matName, quantity, urgency });
+            document.getElementById('matName').value = '';
+            document.getElementById('matQuantity').value = '';
+            submitForm(currentLang === 'en' ? 'Material request submitted!' : 'साहित्य विनंती सादर झाली!');
+        }
+
+        async function submitLeaveApplication() {
+            const leaveType = document.getElementById('leaveType').value;
+            const from = document.getElementById('leaveFrom').value;
+            const to = document.getElementById('leaveTo').value;
+            const reason = document.getElementById('leaveReason').value.trim();
+
+            if (!from || !to) {
+                showToast(currentLang === 'en' ? 'Please select from and to dates' : 'कृपया तारखा निवडा', 'error');
+                return;
+            }
+
+            await addSubmission('leave', { leaveType, from, to, reason });
+            document.getElementById('leaveFrom').value = '';
+            document.getElementById('leaveTo').value = '';
+            document.getElementById('leaveReason').value = '';
+            submitForm(currentLang === 'en' ? 'Leave application submitted!' : 'रजा अर्ज सादर झाला!');
+        }
+
+        function renderSubmissionRow(entry, statusLabel) {
+            const dt = new Date(entry.timestamp);
+            const dateStr = dt.toLocaleDateString() + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            let title = '', sub = '';
+            if (entry.type === 'maintenance') {
+                title = `${entry.details.machine} - ${entry.details.issueType}`;
+                sub = `${entry.details.description || 'No description'} · ${dateStr}`;
+            } else if (entry.type === 'leave') {
+                title = `${entry.empId} - ${entry.details.leaveType}`;
+                sub = `${entry.details.from} to ${entry.details.to}`;
+            } else if (entry.type === 'production') {
+                title = `${entry.details.machine} · Job ${entry.details.jobId}`;
+                sub = `Qty: ${entry.details.quantity} · ${dateStr}`;
+            } else if (entry.type === 'material') {
+                title = `${entry.details.matName} (${entry.details.matType})`;
+                sub = `Qty: ${entry.details.quantity} · ${entry.details.urgency}`;
+            }
+            const isPending = entry.status === 'pending';
+            const actions = isPending
+                ? `<button class="approve-btn" onclick="resolveSubmission('${entry.id}', '${entry.type === 'maintenance' ? 'resolved' : 'approved'}')">${entry.type === 'maintenance' ? 'Resolve' : 'Approve'}</button>${entry.type === 'leave' ? `<button class="reject-btn" onclick="resolveSubmission('${entry.id}', 'rejected')">Reject</button>` : ''}`
+                : `<span class="report-status status-approved">${entry.status}</span>`;
+            return `<div class="worker-row">
+                <div class="worker-row-info">
+                    <h4>${title}</h4>
+                    <p>${sub}</p>
+                </div>
+                <div>${actions}</div>
+            </div>`;
+        }
+
+        async function resolveSubmission(id, status) {
+            await updateSubmissionStatus(id, status);
+            showToast(currentLang === 'en' ? 'Updated' : 'अद्ययावत झाले', 'success');
+            await loadAdminData();
+        }
+
+        // ---- Machine & Job Assignment ----
+        const MACHINE_LIST = ['Blank Rotary', 'Slitter', 'Flat Belt', 'Gumming', 'Paper Slitter', 'Single Colour', 'Double Colour', '4 Colour', '6 Colour', 'Packing', 'Printer Installation'];
+        let mjSelectedMachine = null;
+        let mjSelectedJob = null;
+        let mjPendingSwitchTargetId = null;
+
+        async function loadJobs() {
+            const jobs = await loadData('jobs', true);
+            return jobs || [];
+        }
+
+        async function saveJobs(jobs) {
+            await saveData('jobs', jobs, true);
+        }
+
+        async function seedJobsIfEmpty() {
+            const existing = await loadData('jobs', true);
+            if (existing && existing.length > 0) return;
+            const seed = [];
+            MACHINE_LIST.forEach((m, idx) => {
+                if (m === 'Printer Installation') {
+                    seed.push({ id: `job_${idx}_1`, machine: m, jobId: `PI-${100 + idx}`, customerName: 'Sample Customer A', jobType: 'Installation', status: 'pending' });
+                    seed.push({ id: `job_${idx}_2`, machine: m, jobId: `PI-${101 + idx}`, customerName: 'Sample Customer B', jobType: 'Maintenance', issue: 'Printer not feeding paper correctly', status: 'pending' });
+                } else {
+                    seed.push({ id: `job_${idx}_1`, machine: m, jobId: `JOB-${100 + idx * 2}`, description: `${m} production run`, quantity: 500 + idx * 50, status: 'pending' });
+                    seed.push({ id: `job_${idx}_2`, machine: m, jobId: `JOB-${101 + idx * 2}`, description: `${m} batch order`, quantity: 300 + idx * 30, status: 'pending' });
+                }
+            });
+            await saveJobs(seed);
+        }
+
+        async function saveCurrentAssignment(machine, job) {
+            await saveData(`currentAssignment:${currentUser.empId}`, {
+                empId: currentUser.empId,
+                machine: machine || null,
+                jobId: job ? job.id : null,
+                jobLabel: job ? getJobTitle(job) : null,
+                jobStatus: job ? job.status : null,
+                timestamp: new Date().toISOString()
+            }, true);
+        }
+
+        function updateMachineJobCard() {
+            document.getElementById('currentMachineLabel').textContent = mjSelectedMachine || (currentLang === 'en' ? 'Not Selected' : 'निवडलेले नाही');
+            const runningTag = mjSelectedJob && mjSelectedJob.status === 'in-progress' ? ` <span style="color: var(--success);">● ${currentLang === 'en' ? 'Running' : 'सुरू आहे'}</span>` : '';
+            document.getElementById('currentJobLabel').innerHTML = mjSelectedJob ? `${mjSelectedJob.jobId} - ${mjSelectedJob.description}${runningTag}` : (currentLang === 'en' ? 'None' : 'काहीही नाही');
+        }
+
+        async function renderMachineGrid() {
+            const grid = document.getElementById('mjMachineGrid');
+            const lastMachine = await loadData(`lastMachine:${currentUser.empId}`, false);
+            let list = [...MACHINE_LIST];
+            if (lastMachine && list.includes(lastMachine)) {
+                list = [lastMachine, ...list.filter(m => m !== lastMachine)];
+            }
+            grid.innerHTML = list.map(m => `<div class="machine-option" onclick="selectMachineForJob('${m}')">${m}</div>`).join('')
+                + `<div class="machine-option" style="border-style:dashed;" onclick="showCustomMachineInput()">+ ${currentLang === 'en' ? 'Custom' : 'नवीन'}</div>`;
+        }
+
+        function showCustomMachineInput() {
+            document.getElementById('mjMachineCustomInput').style.display = 'block';
+            document.getElementById('mjMachineCustomSubmit').style.display = 'block';
+        }
+
+        function submitCustomMachine() {
+            const val = document.getElementById('mjMachineCustomInput').value.trim();
+            if (!val) {
+                showToast(currentLang === 'en' ? 'Please enter machine name' : 'कृपया मशीनचे नाव टाका', 'error');
+                return;
+            }
+            document.getElementById('mjMachineCustomInput').value = '';
+            document.getElementById('mjMachineCustomInput').style.display = 'none';
+            document.getElementById('mjMachineCustomSubmit').style.display = 'none';
+            selectMachineForJob(val);
+        }
+
+        function openMachineJobModal() {
+            document.getElementById('mjMachineListView').style.display = 'block';
+            document.getElementById('mjJobListView').style.display = 'none';
+            document.getElementById('mjJobDetailView').style.display = 'none';
+            document.getElementById('mjModalTitle').textContent = currentLang === 'en' ? 'Select Machine' : 'मशीन निवडा';
+            renderMachineGrid();
+            openModal('machineJobModal');
+        }
+
+        function closeMachineJobModal() {
+            closeModal('machineJobModal');
+        }
+
+        function getJobTitle(job) {
+            if (job.machine === 'Printer Installation') {
+                return `${job.jobId} - ${job.customerName || 'Unknown Customer'}`;
+            }
+            return `${job.jobId} - ${job.description || ''}`;
+        }
+
+        function getJobSubtitle(job) {
+            if (job.machine === 'Printer Installation') {
+                if (job.jobType === 'Maintenance') {
+                    return `${currentLang === 'en' ? 'Issue' : 'समस्या'}: ${job.issue || '-'}`;
+                }
+                return currentLang === 'en' ? 'Installation' : 'इन्स्टॉलेशन';
+            }
+            return `${currentLang === 'en' ? 'Quantity' : 'प्रमाण'}: ${job.quantity}`;
+        }
+
+        async function selectMachineForJob(machine) {
+            showLoadingOverlay();
+            mjSelectedMachine = machine;
+            await saveData(`lastMachine:${currentUser.empId}`, machine, false);
+
+            const jobs = await loadJobs();
+            const relevant = jobs.filter(j => j.machine === machine && (j.status === 'pending' || (j.status === 'in-progress' && j.runBy === currentUser.empId)));
+
+            // Restore selected job reference if one is running
+            const running = relevant.find(j => j.status === 'in-progress');
+            mjSelectedJob = running || null;
+            await saveCurrentAssignment(machine, mjSelectedJob);
+            updateMachineJobCard();
+
+            document.getElementById('mjSelectedMachineLabel').textContent = machine + (currentLang === 'en' ? ' - Pending Jobs' : ' - प्रलंबित जॉब्स');
+            const list = document.getElementById('mjJobsList');
+
+            if (relevant.length === 0) {
+                list.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 20px;">${currentLang === 'en' ? 'No pending jobs for this machine' : 'या मशीनसाठी कोणतेही प्रलंबित जॉब नाहीत'}</p>`;
+            } else {
+                list.innerHTML = relevant.map(j => `
+                    <div class="training-item" style="cursor:pointer;" onclick="openJobDetail('${j.id}')">
+                        <div class="training-header">
+                            <span class="training-name">${getJobTitle(j)}</span>
+                            ${j.status === 'in-progress' ? `<span class="report-status status-approved">● ${currentLang === 'en' ? 'Running' : 'सुरू'}</span>` : ''}
+                        </div>
+                        <div style="font-size:13px; color:var(--text-secondary);">${getJobSubtitle(j)}</div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('mjMachineListView').style.display = 'none';
+            document.getElementById('mjJobListView').style.display = 'block';
+            document.getElementById('mjModalTitle').textContent = machine;
+            hideLoadingOverlay();
+        }
+
+        function backToMachineList() {
+            document.getElementById('mjJobListView').style.display = 'none';
+            document.getElementById('mjMachineListView').style.display = 'block';
+            document.getElementById('mjModalTitle').textContent = currentLang === 'en' ? 'Select Machine' : 'मशीन निवडा';
+            renderMachineGrid();
+        }
+
+        async function openJobDetail(jobId) {
+            showLoadingOverlay();
+            const jobs = await loadJobs();
+            const job = jobs.find(j => j.id === jobId);
+            if (!job) { hideLoadingOverlay(); return; }
+
+            const isInstall = job.machine === 'Printer Installation';
+            document.getElementById('mjJobDetailCard').innerHTML = `
+                <div class="report-header">
+                    <span class="report-date">${job.jobId}</span>
+                    <span class="report-status ${job.status === 'in-progress' ? 'status-approved' : 'status-pending'}">${job.status === 'in-progress' ? (currentLang === 'en' ? 'Running' : 'सुरू') : (currentLang === 'en' ? 'Pending' : 'प्रलंबित')}</span>
+                </div>
+                ${isInstall
+                    ? `<div style="margin-top:10px; font-weight:600;">${job.customerName || ''}</div>
+                       <div style="margin-top:5px; color:var(--text-secondary); font-size:14px;">${currentLang === 'en' ? 'Type' : 'प्रकार'}: ${job.jobType}</div>
+                       ${job.jobType === 'Maintenance' ? `<div style="margin-top:5px; color:var(--text-secondary); font-size:14px;">${currentLang === 'en' ? 'Issue' : 'समस्या'}: ${job.issue || '-'}</div>` : ''}`
+                    : `<div style="margin-top:10px; font-weight:600;">${job.description}</div>
+                       <div style="margin-top:5px; color:var(--text-secondary); font-size:14px;">${currentLang === 'en' ? 'Quantity' : 'प्रमाण'}: ${job.quantity}</div>`
+                }
+                <div style="margin-top:5px; color:var(--text-secondary); font-size:14px;">${currentLang === 'en' ? 'Machine' : 'मशीन'}: ${job.machine}</div>
+            `;
+
+            document.getElementById('mjIncompleteForm').style.display = 'none';
+            document.getElementById('mjCompleteForm').style.display = 'none';
+            document.getElementById('mjPackingForm').style.display = 'none';
+
+            if (job.status === 'in-progress' && job.runBy === currentUser.empId) {
+                document.getElementById('mjRunButtonWrap').style.display = 'none';
+                document.getElementById('mjActionButtons').style.display = 'flex';
+                mjSelectedJob = job;
+            } else {
+                document.getElementById('mjRunButtonWrap').style.display = 'block';
+                document.getElementById('mjActionButtons').style.display = 'none';
+                mjSelectedJob = job;
+            }
+
+            document.getElementById('mjJobListView').style.display = 'none';
+            document.getElementById('mjJobDetailView').style.display = 'block';
+            hideLoadingOverlay();
+            document.getElementById('mjModalTitle').textContent = job.jobId;
+        }
+
+        function backToJobList() {
+            document.getElementById('mjJobDetailView').style.display = 'none';
+            selectMachineForJob(mjSelectedMachine);
+        }
+
+        async function findOperatorRunningJob(empId) {
+            const jobs = await loadJobs();
+            return jobs.find(j => j.status === 'in-progress' && j.runBy === empId);
+        }
+
+        async function runJob() {
+            const runningJob = await findOperatorRunningJob(currentUser.empId);
+            if (runningJob && runningJob.id !== mjSelectedJob.id) {
+                mjPendingSwitchTargetId = mjSelectedJob.id;
+                mjSelectedJob = runningJob;
+                showToast(currentLang === 'en' ? 'You have a job running - mark it incomplete first' : 'तुमचा एक जॉब सुरू आहे - आधी तो अपूर्ण करा', 'error');
+                document.getElementById('mjJobDetailCard').innerHTML = `
+                    <div class="report-header">
+                        <span class="report-date">${runningJob.jobId}</span>
+                        <span class="report-status status-approved">${currentLang === 'en' ? 'Currently Running' : 'सध्या सुरू'}</span>
+                    </div>
+                    <div style="margin-top:10px; font-weight:600;">${runningJob.description}</div>
+                `;
+                document.getElementById('mjRunButtonWrap').style.display = 'none';
+                document.getElementById('mjActionButtons').style.display = 'none';
+                showIncompleteReason();
+                return;
+            }
+            await startJobRun(mjSelectedJob.id);
+        }
+
+        async function startJobRun(jobId) {
+            const jobs = await loadJobs();
+            const job = jobs.find(j => j.id === jobId);
+            if (!job) return;
+            job.status = 'in-progress';
+            job.runBy = currentUser.empId;
+            job.runStartedAt = new Date().toISOString();
+            await saveJobs(jobs);
+            mjSelectedJob = job;
+            await saveCurrentAssignment(mjSelectedMachine, job);
+            updateMachineJobCard();
+            showToast(currentLang === 'en' ? 'Job started!' : 'जॉब सुरू झाला!', 'success');
+            await selectMachineForJob(mjSelectedMachine);
+        }
+
+        function startCompleteFlow() {
+            document.getElementById('mjActionButtons').style.display = 'none';
+            if (mjSelectedMachine === 'Packing') {
+                populatePackingSizeDropdown();
+                document.getElementById('mjPackingForm').style.display = 'block';
+            } else if (mjSelectedMachine === 'Printer Installation') {
+                finalizeInstallationComplete();
+            } else {
+                document.getElementById('mjCompleteForm').style.display = 'block';
+            }
+        }
+
+        async function finalizeInstallationComplete() {
+            showLoadingOverlay();
+            const jobs = await loadJobs();
+            const job = jobs.find(j => j.id === mjSelectedJob.id);
+            if (job) {
+                job.status = 'completed';
+                job.completedBy = currentUser.empId;
+                job.completedAt = new Date().toISOString();
+                await saveJobs(jobs);
+            }
+            showToast(currentLang === 'en' ? 'Marked complete!' : 'पूर्ण म्हणून चिन्हांकित!', 'success');
+            mjSelectedJob = null;
+            await saveCurrentAssignment(mjSelectedMachine, null);
+            updateMachineJobCard();
+            hideLoadingOverlay();
+            backToJobList();
+        }
+
+        async function populatePackingSizeDropdown() {
+            const opts = await loadOrderOptions();
+            const sel = document.getElementById('packSize');
+            sel.innerHTML = opts.sizes.map(v => `<option value="${v}">${v}</option>`).join('') + `<option value="__custom__">+ ${currentLang === 'en' ? 'Custom / New' : 'नवीन जोडा'}</option>`;
+        }
+
+        async function finalizeComplete() {
+            const qty = document.getElementById('mjQtyProduced').value.trim();
+            if (!qty) {
+                showToast(currentLang === 'en' ? 'Please enter quantity produced' : 'कृपया उत्पादित प्रमाण टाका', 'error');
+                return;
+            }
+            const jobs = await loadJobs();
+            const job = jobs.find(j => j.id === mjSelectedJob.id);
+            if (job) {
+                job.status = 'completed';
+                job.completedBy = currentUser.empId;
+                job.completedAt = new Date().toISOString();
+                job.qtyProduced = qty;
+                await saveJobs(jobs);
+            }
+            document.getElementById('mjQtyProduced').value = '';
+            showToast(currentLang === 'en' ? 'Job marked complete!' : 'जॉब पूर्ण म्हणून चिन्हांकित!', 'success');
+            mjSelectedJob = null;
+            await saveCurrentAssignment(mjSelectedMachine, null);
+            updateMachineJobCard();
+            backToJobList();
+        }
+
+        async function finalizePackingComplete() {
+            const size = getFieldValue('packSize', 'packSizeCustom');
+            const rolls = document.getElementById('packRolls').value.trim();
+            const boxes = document.getElementById('packBoxes').value.trim();
+            const customer = document.getElementById('packCustomer').value.trim();
+
+            if (!size || !rolls || !boxes || !customer) {
+                showToast(currentLang === 'en' ? 'Please fill size, rolls, boxes and customer' : 'कृपया सर्व फील्ड भरा', 'error');
+                return;
+            }
+            await addOptionIfNew('sizes', size);
+
+            const jobs = await loadJobs();
+            const job = jobs.find(j => j.id === mjSelectedJob.id);
+            if (job) {
+                job.status = 'completed';
+                job.completedBy = currentUser.empId;
+                job.completedAt = new Date().toISOString();
+                job.packing = { size, rolls, boxes, customer };
+                await saveJobs(jobs);
+            }
+            document.getElementById('packRolls').value = '';
+            document.getElementById('packBoxes').value = '';
+            document.getElementById('packCustomer').value = '';
+            showToast(currentLang === 'en' ? 'Packing recorded!' : 'पॅकिंग नोंदवले!', 'success');
+            mjSelectedJob = null;
+            await saveCurrentAssignment(mjSelectedMachine, null);
+            updateMachineJobCard();
+            backToJobList();
+        }
+
+        function showIncompleteReason() {
+            document.getElementById('mjActionButtons').style.display = 'none';
+            document.getElementById('mjRunButtonWrap').style.display = 'none';
+            document.getElementById('mjIncompleteForm').style.display = 'block';
+        }
+
+        async function submitIncomplete() {
+            const pendingQty = document.getElementById('mjPendingQty').value.trim();
+            const reason = document.getElementById('mjIncompleteReason').value.trim();
+            if (!pendingQty || !reason) {
+                showToast(currentLang === 'en' ? 'Pending Qty and Reason are both required' : 'प्रलंबित प्रमाण आणि कारण दोन्ही आवश्यक आहे', 'error');
+                return;
+            }
+            const jobs = await loadJobs();
+            const job = jobs.find(j => j.id === mjSelectedJob.id);
+            if (job) {
+                job.status = 'incomplete';
+                job.pendingQty = pendingQty;
+                job.incompleteReason = reason;
+                job.markedBy = currentUser.empId;
+                job.markedAt = new Date().toISOString();
+                await saveJobs(jobs);
+            }
+            document.getElementById('mjPendingQty').value = '';
+            document.getElementById('mjIncompleteReason').value = '';
+            showToast(currentLang === 'en' ? 'Marked incomplete, reason saved' : 'अपूर्ण म्हणून चिन्हांकित, कारण जतन केले', 'info');
+
+            mjSelectedJob = null;
+            await saveCurrentAssignment(mjSelectedMachine, null);
+            updateMachineJobCard();
+
+            if (mjPendingSwitchTargetId) {
+                const targetId = mjPendingSwitchTargetId;
+                mjPendingSwitchTargetId = null;
+                await startJobRun(targetId);
+            } else {
+                backToJobList();
+            }
+        }
+
+        // ---- Inward Orders (Size / Paper / UPS / Core) ----
+        const DEFAULT_ORDER_OPTIONS = {
+            sizes: ['4x2', '4x3', '4x4', '4x6'],
+            papers: ['Chromo', 'D.T', 'Avery Chromo', 'Avery D.T', 'Avery N.T', 'N.T (Lintec)', 'N.T (Tackify)'],
+            ups: ['1up', '2up', '3up', '4up', '5up', '6up'],
+            perRollQty: ['250', '400', '500', '1000', '2000', '3000', '4000', '5000', '6000', '10000'],
+            cores: ['1"', '1.5"', '3"']
+        };
+
+        async function seedOrderOptionsIfEmpty() {
+            const existing = await loadData('orderOptions', true);
+            if (existing) return;
+            await saveData('orderOptions', DEFAULT_ORDER_OPTIONS, true);
+        }
+
+        async function loadOrderOptions() {
+            const opts = await loadData('orderOptions', true);
+            return opts || DEFAULT_ORDER_OPTIONS;
+        }
+
+        async function saveOrderOptions(opts) {
+            await saveData('orderOptions', opts, true);
+        }
+
+        async function addOptionIfNew(field, value) {
+            if (!value) return;
+            const opts = await loadOrderOptions();
+            const list = opts[field] || [];
+            const exists = list.some(v => v.toLowerCase() === value.toLowerCase());
+            if (!exists) {
+                list.push(value);
+                opts[field] = list;
+                await saveOrderOptions(opts);
+            }
+        }
+
+        async function populateOrderDropdowns() {
+            const opts = await loadOrderOptions();
+            const map = { orderSize: opts.sizes, orderPaper: opts.papers, orderUps: opts.ups, orderPerRollQty: opts.perRollQty, orderCore: opts.cores };
+            for (const [selectId, list] of Object.entries(map)) {
+                const sel = document.getElementById(selectId);
+                if (!sel) continue;
+                const prevValue = sel.value;
+                sel.innerHTML = list.map(v => `<option value="${v}">${v}</option>`).join('') + `<option value="__custom__">+ ${currentLang === 'en' ? 'Custom / New' : 'नवीन जोडा'}</option>`;
+                if (list.includes(prevValue)) sel.value = prevValue;
+            }
+        }
+
+        function toggleCustomInput(selectId, customInputId) {
+            const sel = document.getElementById(selectId);
+            const custom = document.getElementById(customInputId);
+            custom.style.display = sel.value === '__custom__' ? 'block' : 'none';
+        }
+
+        function getFieldValue(selectId, customInputId) {
+            const sel = document.getElementById(selectId);
+            if (sel.value === '__custom__') {
+                return document.getElementById(customInputId).value.trim();
+            }
+            return sel.value;
+        }
+
+        async function loadOrders() {
+            const orders = await loadData('orders', true);
+            return orders || [];
+        }
+
+        async function saveOrders(orders) {
+            await saveData('orders', orders, true);
+        }
+
+        async function submitNewOrder() {
+            const jobNo = document.getElementById('orderJobNo').value.trim();
+            const customer = document.getElementById('orderCustomer').value.trim();
+            const size = getFieldValue('orderSize', 'orderSizeCustom');
+            const paper = getFieldValue('orderPaper', 'orderPaperCustom');
+            const ups = getFieldValue('orderUps', 'orderUpsCustom');
+            const perRollQty = getFieldValue('orderPerRollQty', 'orderPerRollQtyCustom');
+            const core = getFieldValue('orderCore', 'orderCoreCustom');
+            const quantity = document.getElementById('orderQuantity').value.trim();
+
+            if (!jobNo || !size || !paper || !ups || !core) {
+                showToast(currentLang === 'en' ? 'Please fill Job No, Size, Paper, UPS and Core' : 'कृपया सर्व आवश्यक फील्ड भरा', 'error');
+                return;
+            }
+
+            await addOptionIfNew('sizes', size);
+            await addOptionIfNew('papers', paper);
+            await addOptionIfNew('ups', ups);
+            await addOptionIfNew('perRollQty', perRollQty);
+            await addOptionIfNew('cores', core);
+
+            const orders = await loadOrders();
+            orders.push({
+                id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                jobNo, customer, size, paper, ups, perRollQty, core, quantity,
+                source: 'manual',
+                addedBy: currentUser.empId,
+                timestamp: new Date().toISOString()
+            });
+            await saveOrders(orders);
+
+            document.getElementById('orderJobNo').value = '';
+            document.getElementById('orderCustomer').value = '';
+            document.getElementById('orderQuantity').value = '';
+            document.getElementById('orderSizeCustom').value = '';
+            document.getElementById('orderPaperCustom').value = '';
+            document.getElementById('orderUpsCustom').value = '';
+            document.getElementById('orderPerRollQtyCustom').value = '';
+            document.getElementById('orderCoreCustom').value = '';
+
+            await populateOrderDropdowns();
+            await renderOrdersList();
+            showToast(currentLang === 'en' ? 'Order added!' : 'ऑर्डर जोडली!', 'success');
+        }
+
+        async function deleteOrder(id) {
+            const orders = await loadOrders();
+            const filtered = orders.filter(o => o.id !== id);
+            await saveOrders(filtered);
+            await renderOrdersList();
+            showToast(currentLang === 'en' ? 'Order removed' : 'ऑर्डर काढली', 'info');
+        }
+
+        async function renderOrdersList() {
+            const panel = document.getElementById('ordersListPanel');
+            if (!panel) return;
+            const orders = await loadOrders();
+
+            if (orders.length === 0) {
+                panel.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 20px;">${currentLang === 'en' ? 'No inward orders yet' : 'अजून कोणतीही ऑर्डर नाही'}</p>`;
+                return;
+            }
+
+            panel.innerHTML = orders.slice().reverse().map(o => `
+                <div class="worker-row">
+                    <div class="worker-row-info">
+                        <h4>${o.jobNo}${o.customer ? ' - ' + o.customer : ''}</h4>
+                        <p>${o.size} · ${o.paper} · ${o.ups}${o.perRollQty ? ' · ' + o.perRollQty + '/roll' : ''} · Core ${o.core}${o.quantity ? ' · Qty ' + o.quantity : ''}</p>
+                    </div>
+                    <button class="reject-btn" onclick="deleteOrder('${o.id}')"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function findColumnIndex(headers, keywords) {
+            for (let i = 0; i < headers.length; i++) {
+                const h = String(headers[i] || '').toLowerCase().trim();
+                if (keywords.some(k => h.includes(k))) return i;
+            }
+            return -1;
+        }
+
+        async function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const statusEl = document.getElementById('excelUploadStatus');
+            statusEl.textContent = currentLang === 'en' ? 'Reading sheet...' : 'शीट वाचत आहे...';
+
+            try {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                if (rows.length < 2) {
+                    statusEl.textContent = currentLang === 'en' ? 'Sheet appears empty' : 'शीट रिकामी दिसते';
+                    return;
+                }
+
+                const headers = rows[0];
+                const colJobNo = findColumnIndex(headers, ['job', 'order no', 'order #', 'order id']);
+                const colCustomer = findColumnIndex(headers, ['customer', 'party', 'client', 'name']);
+                const colSize = findColumnIndex(headers, ['size']);
+                const colPaper = findColumnIndex(headers, ['paper', 'material']);
+                const colUps = findColumnIndex(headers, ['ups', 'up']);
+                const colPerRoll = findColumnIndex(headers, ['per roll', 'roll qty', 'perroll']);
+                const colCore = findColumnIndex(headers, ['core']);
+                const colQty = findColumnIndex(headers, ['qty', 'quantity']);
+
+                const orders = await loadOrders();
+                let addedCount = 0;
+
+                for (let r = 1; r < rows.length; r++) {
+                    const row = rows[r];
+                    if (!row || row.length === 0) continue;
+
+                    const jobNo = colJobNo >= 0 ? String(row[colJobNo] || '').trim() : '';
+                    const size = colSize >= 0 ? String(row[colSize] || '').trim() : '';
+                    if (!jobNo && !size) continue;
+
+                    const customer = colCustomer >= 0 ? String(row[colCustomer] || '').trim() : '';
+                    const paper = colPaper >= 0 ? String(row[colPaper] || '').trim() : '';
+                    const ups = colUps >= 0 ? String(row[colUps] || '').trim() : '';
+                    const perRollQty = colPerRoll >= 0 ? String(row[colPerRoll] || '').trim() : '';
+                    const core = colCore >= 0 ? String(row[colCore] || '').trim() : '';
+                    const quantity = colQty >= 0 ? String(row[colQty] || '').trim() : '';
+
+                    orders.push({
+                        id: Date.now() + '_' + r + '_' + Math.random().toString(36).slice(2, 5),
+                        jobNo: jobNo || `ROW-${r}`,
+                        customer, size, paper, ups, perRollQty, core, quantity,
+                        source: 'excel',
+                        addedBy: currentUser.empId,
+                        timestamp: new Date().toISOString()
+                    });
+
+                    if (size) await addOptionIfNew('sizes', size);
+                    if (paper) await addOptionIfNew('papers', paper);
+                    if (ups) await addOptionIfNew('ups', ups);
+                    if (perRollQty) await addOptionIfNew('perRollQty', perRollQty);
+                    if (core) await addOptionIfNew('cores', core);
+
+                    addedCount++;
+                }
+
+                await saveOrders(orders);
+                await populateOrderDropdowns();
+                await renderOrdersList();
+
+                statusEl.textContent = currentLang === 'en'
+                    ? `${addedCount} orders imported successfully!`
+                    : `${addedCount} ऑर्डर यशस्वीरित्या आयात झाल्या!`;
+                showToast(currentLang === 'en' ? `${addedCount} orders imported!` : `${addedCount} ऑर्डर आयात झाल्या!`, 'success');
+                event.target.value = '';
+            } catch (e) {
+                console.error(e);
+                statusEl.textContent = currentLang === 'en' ? 'Could not read this file. Please check the format.' : 'फाईल वाचता आली नाही.';
+                showToast(currentLang === 'en' ? 'Upload failed' : 'अपलोड अयशस्वी', 'error');
+            }
+        }
+
+        // ---- Operator Profiles (Salary, OT, Advance, Deduction) ----
+        async function loadOperatorProfile(empId) {
+            return await loadData(`operatorProfile:${empId}`, true);
+        }
+
+        async function saveOperatorProfile() {
+            const empId = document.getElementById('opEmpId').value.trim();
+            if (!empId) {
+                showToast(currentLang === 'en' ? 'Please enter Employee ID' : 'कृपया कर्मचारी आयडी टाका', 'error');
+                return;
+            }
+            const existing = (await loadOperatorProfile(empId)) || {};
+            const profile = {
+                empId,
+                name: document.getElementById('opName').value.trim() || existing.name || '',
+                salary: parseFloat(document.getElementById('opSalary').value) || existing.salary || 0,
+                otHours: parseFloat(document.getElementById('opOtHours').value) || existing.otHours || 0,
+                advanceGiven: parseFloat(document.getElementById('opAdvance').value) || existing.advanceGiven || 0,
+                monthlyDeduction: parseFloat(document.getElementById('opMonthlyDeduction').value) || existing.monthlyDeduction || 0,
+                totalDeducted: existing.totalDeducted || 0
+            };
+            await saveData(`operatorProfile:${empId}`, profile, true);
+
+            document.getElementById('opEmpId').value = '';
+            document.getElementById('opName').value = '';
+            document.getElementById('opSalary').value = '';
+            document.getElementById('opOtHours').value = '';
+            document.getElementById('opAdvance').value = '';
+            document.getElementById('opMonthlyDeduction').value = '';
+
+            await renderOperatorsList();
+            showToast(currentLang === 'en' ? 'Operator profile saved!' : 'ऑपरेटर प्रोफाइल जतन झाली!', 'success');
+        }
+
+        async function loadAllOperatorProfiles() {
+            if (!hasStorage()) return [];
+            try {
+                const listResult = await window.storage.list('operatorProfile:', true);
+                if (!listResult || !listResult.keys) return [];
+                const profiles = [];
+                for (const key of listResult.keys) {
+                    const data = await loadData(key, true);
+                    if (data) profiles.push(data);
+                }
+                return profiles;
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function addMonthlyDeductionFor(empId) {
+            const profile = await loadOperatorProfile(empId);
+            if (!profile) return;
+            profile.totalDeducted = (profile.totalDeducted || 0) + (profile.monthlyDeduction || 0);
+            await saveData(`operatorProfile:${empId}`, profile, true);
+            await renderOperatorsList();
+            showToast(currentLang === 'en' ? 'Deduction logged for this month' : 'या महिन्याची कपात नोंदवली', 'success');
+        }
+
+        async function openOperatorDetail(empId) {
+            showLoadingOverlay();
+            openModal('operatorDetailModal');
+
+            const [profile, assignment, location, allJobs] = await Promise.all([
+                loadOperatorProfile(empId),
+                loadData(`currentAssignment:${empId}`, true),
+                loadData(`liveLocation:${empId}`, true),
+                loadJobs()
+            ]);
+
+            document.getElementById('odModalTitle').textContent = (profile && profile.name) ? profile.name : empId;
+
+            const isPresent = location && location.status === 'active';
+            const balance = profile ? (profile.advanceGiven || 0) - (profile.totalDeducted || 0) : 0;
+
+            const recentJobs = allJobs
+                .filter(j => j.runBy === empId || j.completedBy === empId || j.markedBy === empId)
+                .sort((a, b) => new Date(b.completedAt || b.markedAt || b.runStartedAt || 0) - new Date(a.completedAt || a.markedAt || a.runStartedAt || 0))
+                .slice(0, 10);
+
+            const jobsHtml = recentJobs.length === 0
+                ? `<p style="text-align:center; color: var(--text-secondary); padding: 10px;">${currentLang === 'en' ? 'No job activity yet' : 'अजून कोणतेही काम नाही'}</p>`
+                : recentJobs.map(j => `
+                    <div class="history-item">
+                        <div>
+                            <div style="font-weight:700;">${j.machine} - ${j.jobId}</div>
+                            <div style="font-size:12px; color:var(--text-secondary);">${j.status}${j.qtyProduced ? ' · Qty: ' + j.qtyProduced : ''}${j.pendingQty ? ' · Pending: ' + j.pendingQty : ''}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+            document.getElementById('odContent').innerHTML = `
+                <div class="status-row">
+                    <span>${currentLang === 'en' ? 'Employee ID' : 'कर्मचारी आयडी'}</span>
+                    <strong>${empId}</strong>
+                </div>
+                <div class="status-row">
+                    <span>${currentLang === 'en' ? 'Status' : 'स्थिती'}</span>
+                    <span class="report-status ${isPresent ? 'status-approved' : 'status-pending'}">${isPresent ? (currentLang === 'en' ? 'Present' : 'उपस्थित') : (currentLang === 'en' ? 'Not checked in' : 'चेक-इन नाही')}</span>
+                </div>
+                <div class="status-row">
+                    <span>${currentLang === 'en' ? "Today's Machine" : 'आजची मशीन'}</span>
+                    <strong>${assignment && assignment.machine ? assignment.machine : '-'}</strong>
+                </div>
+                <div class="status-row">
+                    <span>${currentLang === 'en' ? "Today's Job" : 'आजचे काम'}</span>
+                    <strong>${assignment && assignment.jobLabel ? assignment.jobLabel : '-'}</strong>
+                </div>
+
+                <div style="background:#f9fafb; border-radius:15px; padding:15px; margin-top:15px;">
+                    <h4 style="margin-bottom:10px; font-size:15px;"><i class="fas fa-money-bill-wave" style="color:var(--primary);"></i> ${currentLang === 'en' ? 'Payment Details' : 'पेमेंट तपशील'}</h4>
+                    <div class="status-row"><span>${currentLang === 'en' ? 'Monthly Salary' : 'मासिक पगार'}</span><strong>₹${profile ? (profile.salary || 0).toLocaleString() : 0}</strong></div>
+                    <div class="status-row"><span>${currentLang === 'en' ? 'Total OT Hours' : 'एकूण ओटी तास'}</span><strong>${profile ? (profile.otHours || 0) : 0}h</strong></div>
+                    <div class="status-row"><span>${currentLang === 'en' ? 'Advance Given' : 'अ‍ॅडव्हान्स'}</span><strong>₹${profile ? (profile.advanceGiven || 0).toLocaleString() : 0}</strong></div>
+                    <div class="status-row"><span>${currentLang === 'en' ? 'Monthly Deduction' : 'मासिक कपात'}</span><strong>₹${profile ? (profile.monthlyDeduction || 0).toLocaleString() : 0}</strong></div>
+                    <div class="status-row"><span>${currentLang === 'en' ? 'Total Deducted' : 'एकूण कापले'}</span><strong>₹${profile ? (profile.totalDeducted || 0).toLocaleString() : 0}</strong></div>
+                    <div class="status-row"><span>${currentLang === 'en' ? 'Balance' : 'शिल्लक'}</span><strong style="color:${balance > 0 ? 'var(--danger)' : 'var(--success)'};">₹${balance.toLocaleString()}</strong></div>
+                </div>
+
+                <h4 style="margin: 15px 0 10px;">${currentLang === 'en' ? 'Recent Job Activity' : 'अलीकडील काम'}</h4>
+                <div class="history-list">${jobsHtml}</div>
+            `;
+            hideLoadingOverlay();
+        }
+
+        async function renderOperatorsList() {
+            const panel = document.getElementById('operatorsListPanel');
+            if (!panel) return;
+            const [profiles, locations] = await Promise.all([loadAllOperatorProfiles(), loadLiveLocations()]);
+
+            if (profiles.length === 0) {
+                panel.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 20px;">${currentLang === 'en' ? 'No operator profiles added yet' : 'अजून कोणतीही प्रोफाइल जोडलेली नाही'}</p>`;
+                return;
+            }
+
+            const rows = await Promise.all(profiles.map(async (p) => {
+                const balance = (p.advanceGiven || 0) - (p.totalDeducted || 0);
+                const isPresent = locations.some(l => l.empId === p.empId && l.status === 'active');
+                const assignment = isPresent ? await loadData(`currentAssignment:${p.empId}`, true) : null;
+                const machine = assignment && assignment.machine ? assignment.machine : (currentLang === 'en' ? 'Not working today' : 'आज काम नाही');
+
+                return `<div class="worker-row" style="cursor:pointer;" onclick="openOperatorDetail('${p.empId}')">
+                    <div class="worker-row-info">
+                        <h4>${p.name || p.empId} <span style="font-weight:400; color:var(--text-secondary);">(${p.empId})</span></h4>
+                        <p>${currentLang === 'en' ? 'Machine today' : 'आजची मशीन'}: ${machine} · ${currentLang === 'en' ? 'Salary' : 'पगार'}: ₹${(p.salary || 0).toLocaleString()} · OT: ${p.otHours || 0}h</p>
+                        <p style="margin-top:4px;">${currentLang === 'en' ? 'Advance' : 'अ‍ॅडव्हान्स'}: ₹${(p.advanceGiven || 0).toLocaleString()} · ${currentLang === 'en' ? 'Deducted' : 'कापले'}: ₹${(p.totalDeducted || 0).toLocaleString()} · ${currentLang === 'en' ? 'Balance' : 'शिल्लक'}: <strong style="color:${balance > 0 ? 'var(--danger)' : 'var(--success)'};">₹${balance.toLocaleString()}</strong></p>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+                        ${isPresent ? `<span class="report-status status-approved">${currentLang === 'en' ? 'Present' : 'उपस्थित'}</span>` : ''}
+                        <button class="approve-btn" onclick="event.stopPropagation(); addMonthlyDeductionFor('${p.empId}')">${currentLang === 'en' ? '+ Deduct' : '+ कपात'}</button>
+                    </div>
+                </div>`;
+            }));
+
+            panel.innerHTML = rows.join('');
+        }
+
+        async function openPayslipModal() {
+            const profile = await loadOperatorProfile(currentUser.empId);
+            if (profile) {
+                const netPay = (profile.salary || 0) + ((profile.otHours || 0) * 30) - ((profile.monthlyDeduction || 0));
+                document.getElementById('payslipNetPay').textContent = `₹${netPay.toLocaleString()}`;
+                document.getElementById('payslipNetPay2').textContent = `₹${netPay.toLocaleString()}`;
+                document.getElementById('payslipBasic').textContent = `₹${(profile.salary || 0).toLocaleString()}`;
+                document.getElementById('payslipOtLabel').textContent = currentLang === 'en' ? `OT Earnings (${profile.otHours || 0} hrs)` : `ओटी कमाई (${profile.otHours || 0} तास)`;
+                document.getElementById('payslipOt').textContent = `+₹${((profile.otHours || 0) * 30).toLocaleString()}`;
+                document.getElementById('payslipDeductions').textContent = `-₹${(profile.monthlyDeduction || 0).toLocaleString()}`;
+
+                const balance = (profile.advanceGiven || 0) - (profile.totalDeducted || 0);
+                document.getElementById('payslipAdvanceGiven').textContent = `₹${(profile.advanceGiven || 0).toLocaleString()}`;
+                document.getElementById('payslipMonthlyDeduction').textContent = `₹${(profile.monthlyDeduction || 0).toLocaleString()}`;
+                document.getElementById('payslipTotalDeducted').textContent = `₹${(profile.totalDeducted || 0).toLocaleString()}`;
+                document.getElementById('payslipBalance').textContent = `₹${balance.toLocaleString()}`;
+            } else {
+                document.getElementById('payslipAdvanceGiven').textContent = currentLang === 'en' ? 'Not set by admin yet' : 'अद्याप सेट केलेले नाही';
+                document.getElementById('payslipMonthlyDeduction').textContent = '-';
+                document.getElementById('payslipTotalDeducted').textContent = '-';
+                document.getElementById('payslipBalance').textContent = '-';
+            }
+            openModal('payslipModal');
+        }
+
+        async function loadAdminData() {
+            await renderAttendanceOverview();
+            const submissions = await loadSubmissions();
+
+            const maintPanel = document.getElementById('adminMaintenance');
+            const maintItems = submissions.filter(s => s.type === 'maintenance');
+            if (maintItems.length > 0) {
+                maintPanel.innerHTML = maintItems.slice().reverse().map(e => renderSubmissionRow(e)).join('');
+            }
+
+            const leavePanel = document.getElementById('adminLeave');
+            const leaveItems = submissions.filter(s => s.type === 'leave');
+            if (leaveItems.length > 0) {
+                leavePanel.innerHTML = leaveItems.slice().reverse().map(e => renderSubmissionRow(e)).join('');
+            }
+
+            const pendingCount = submissions.filter(s => s.status === 'pending').length;
+            const pendingEl = document.getElementById('adminStatPending');
+            if (pendingCount > 0) pendingEl.textContent = pendingCount;
+
+            const issuesCount = submissions.filter(s => s.type === 'maintenance' && s.status === 'pending').length;
+            const issuesEl = document.getElementById('adminStatIssues');
+            if (submissions.some(s => s.type === 'maintenance')) issuesEl.textContent = issuesCount;
+
+            await renderLiveLocations();
+            await populateOrderDropdowns();
+            await renderOrdersList();
+            await renderOperatorsList();
+        }
+
+        async function renderAttendanceOverview() {
+            const panel = document.getElementById('adminAttendance');
+            if (!panel) return;
+
+            const locations = await loadLiveLocations();
+            const present = locations.filter(l => l.status === 'active');
+
+            if (present.length === 0) {
+                panel.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 20px;">${currentLang === 'en' ? 'No workers currently checked in' : 'सध्या कोणीही चेक-इन केलेले नाही'}</p>`;
+                return;
+            }
+
+            const rows = await Promise.all(present.map(async (loc) => {
+                const assignment = await loadData(`currentAssignment:${loc.empId}`, true);
+                const machine = assignment && assignment.machine ? assignment.machine : (currentLang === 'en' ? 'Not selected' : 'निवडलेले नाही');
+                const job = assignment && assignment.jobLabel ? assignment.jobLabel : (currentLang === 'en' ? 'No job selected' : 'जॉब निवडलेला नाही');
+                return `<div class="worker-row">
+                    <div class="worker-row-info">
+                        <h4>${loc.empId}</h4>
+                        <p>${currentLang === 'en' ? 'Machine' : 'मशीन'}: ${machine} · ${job}</p>
+                    </div>
+                    <span class="report-status status-approved">${currentLang === 'en' ? 'Present' : 'उपस्थित'}</span>
+                </div>`;
+            }));
+
+            panel.innerHTML = rows.join('');
+        }
+
+        async function loadLiveLocations() {
+            if (!hasStorage()) return [];
+            try {
+                const listResult = await window.storage.list('liveLocation:', true);
+                if (!listResult || !listResult.keys) return [];
+                const locations = [];
+                for (const key of listResult.keys) {
+                    const data = await loadData(key, true);
+                    if (data) locations.push(data);
+                }
+                return locations;
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function renderLiveLocations() {
+            const panel = document.getElementById('adminLocationPanel');
+            if (!panel) return;
+            const locations = await loadLiveLocations();
+
+            if (locations.length === 0) {
+                panel.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 20px;">${currentLang === 'en' ? 'No workers currently checked in with location tracking' : 'सध्या कोणीही लोकेशन ट्रॅकिंगसह चेक-इन केलेले नाही'}</p>`;
+                return;
+            }
+
+            const rows = await Promise.all(locations.map(async (loc) => {
+                if (loc.status === 'checked-out') {
+                    return `<div class="worker-row">
+                        <div class="worker-row-info">
+                            <h4>${loc.empId}</h4>
+                            <p>${currentLang === 'en' ? 'Checked out' : 'चेक आउट झाले'} · ${new Date(loc.timestamp).toLocaleTimeString()}</p>
+                        </div>
+                        <span class="report-status status-pending">${currentLang === 'en' ? 'Offline' : 'ऑफलाइन'}</span>
+                    </div>`;
+                }
+                const km = (loc.distance / 1000).toFixed(2);
+                const time = new Date(loc.timestamp).toLocaleTimeString();
+                let badge;
+                if (loc.isOnSite) {
+                    badge = `<span class="report-status status-approved">${currentLang === 'en' ? 'On-site' : 'साइटवर'}</span>`;
+                } else if (loc.fieldDuty) {
+                    badge = `<span class="report-status status-pending">${currentLang === 'en' ? 'Field Duty' : 'फील्ड ड्युटी'} · ${km} km</span>`;
+                } else {
+                    badge = `<span class="report-status" style="background:#fee2e2; color:#991b1b;">${currentLang === 'en' ? 'Unexplained' : 'अस्पष्ट'} · ${km} km</span>`;
+                }
+
+                const assignment = await loadData(`currentAssignment:${loc.empId}`, true);
+                const isFieldTrip = assignment && assignment.machine === 'Printer Installation';
+                const trailBtn = isFieldTrip ? `<button class="approve-btn" style="margin-top:6px;" onclick="viewOperatorTrail('${loc.empId}')"><i class="fas fa-route"></i> ${currentLang === 'en' ? 'View Route' : 'मार्ग पहा'}</button>` : '';
+
+                return `<div class="worker-row">
+                    <div class="worker-row-info">
+                        <h4>${loc.empId}</h4>
+                        <p>${currentLang === 'en' ? 'Updated' : 'अद्ययावत'} ${time} · ±${loc.accuracy}m ${currentLang === 'en' ? 'accuracy' : 'अचूकता'}</p>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                        ${badge}
+                        ${trailBtn}
+                    </div>
+                </div>`;
+            }));
+            panel.innerHTML = rows.join('');
+        }
+
+        function computeTripStops(points) {
+            const stops = [];
+            let groupStart = 0;
+            for (let i = 1; i <= points.length; i++) {
+                const prev = points[i - 1];
+                const curr = points[i];
+                const dist = curr ? haversineDistance(prev.lat, prev.lng, curr.lat, curr.lng) : Infinity;
+                if (!curr || dist > 50) {
+                    const groupEnd = i - 1;
+                    if (groupEnd > groupStart) {
+                        const startTime = new Date(points[groupStart].timestamp);
+                        const endTime = new Date(points[groupEnd].timestamp);
+                        const durationMin = (endTime - startTime) / 60000;
+                        if (durationMin >= 3) {
+                            stops.push({ start: points[groupStart].timestamp, end: points[groupEnd].timestamp, durationMin: Math.round(durationMin) });
+                        }
+                    }
+                    groupStart = i;
+                }
+            }
+            return stops;
+        }
+
+        async function finalizeFieldTrip() {
+            const tripKey = `fieldTrip:${currentUser.empId}:${todayStr()}`;
+            const trip = await loadData(tripKey, true);
+            if (!trip) return;
+            trip.ended = true;
+            trip.endedAt = new Date().toISOString();
+            trip.stops = computeTripStops(trip.points);
+            await saveData(tripKey, trip, true);
+        }
+
+        async function viewOperatorTrail(empId) {
+            const trip = await loadData(`fieldTrip:${empId}:${todayStr()}`, true);
+            if (!trip || !trip.points || trip.points.length === 0) {
+                showToast(currentLang === 'en' ? 'No trail data yet' : 'अजून ट्रेल डेटा नाही', 'info');
+                return;
+            }
+            const stops = trip.ended ? trip.stops : computeTripStops(trip.points);
+            const first = trip.points[0];
+            const last = trip.points[trip.points.length - 1];
+            let msg = currentLang === 'en'
+                ? `Trip status: ${trip.ended ? 'Completed' : 'In progress'}\nPoints recorded: ${trip.points.length}\nStarted: ${new Date(first.timestamp).toLocaleTimeString()}\nLast update: ${new Date(last.timestamp).toLocaleTimeString()}\n\n`
+                : `ट्रिप स्थिती: ${trip.ended ? 'पूर्ण' : 'सुरू आहे'}\nपॉइंट्स: ${trip.points.length}\nसुरू: ${new Date(first.timestamp).toLocaleTimeString()}\nशेवटचे: ${new Date(last.timestamp).toLocaleTimeString()}\n\n`;
+            if (stops.length > 0) {
+                msg += (currentLang === 'en' ? `Stops (${stops.length}):\n` : `थांबे (${stops.length}):\n`);
+                stops.forEach((s, i) => {
+                    msg += `${i + 1}. ${new Date(s.start).toLocaleTimeString()} - ${new Date(s.end).toLocaleTimeString()} (${s.durationMin} min)\n`;
+                });
+            } else {
+                msg += currentLang === 'en' ? 'No significant stops detected.' : 'कोणतेही थांबे आढळले नाहीत.';
+            }
+            alert(msg);
+        }
+
+        // Auto-refresh live locations every 15s while admin dashboard is open
+        setInterval(() => {
+            const adminApp = document.getElementById('adminApp');
+            if (adminApp && adminApp.classList.contains('active')) {
+                renderLiveLocations();
+                renderAttendanceOverview();
+            }
+        }, 15000);
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = toast.querySelector('i');
+            const title = toast.querySelector('.toast-title');
+            const msg = toast.querySelector('.toast-message');
+            
+            toast.className = 'toast ' + type;
+            
+            if (type === 'success') {
+                icon.className = 'fas fa-check-circle';
+                title.textContent = currentLang === 'en' ? 'Success' : 'यश';
+            } else if (type === 'error') {
+                icon.className = 'fas fa-exclamation-circle';
+                title.textContent = currentLang === 'en' ? 'Error' : 'त्रुटी';
+            } else {
+                icon.className = 'fas fa-info-circle';
+                title.textContent = currentLang === 'en' ? 'Info' : 'माहिती';
+            }
+            
+            msg.textContent = message;
+            
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            if (tab === 'home') {
+                showToast(currentLang === 'en' ? 'Home refreshed' : 'होम रिफ्रेश केले', 'info');
+            } else if (tab === 'reports') {
+                openModal('reportsModal');
+            } else if (tab === 'training') {
+                openModal('trainingModal');
+            } else if (tab === 'settings') {
+                showToast(currentLang === 'en' ? 'Settings coming soon' : 'सेटिंग्ज लवकरच येत आहेत', 'info');
+            }
+        }
+
+        function switchAdminTab(tab, btn) {
+            document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('admin' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+
+            if (tab === 'orders') {
+                populateOrderDropdowns();
+                renderOrdersList();
+            } else if (tab === 'operators') {
+                renderOperatorsList();
+            } else if (tab === 'attendance') {
+                renderAttendanceOverview();
+            } else if (tab === 'location') {
+                renderLiveLocations();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            updateClock();
+            await seedJobsIfEmpty();
+            await seedOrderOptionsIfEmpty();
+
+            const savedLang = await loadData('lang', false);
+            if (savedLang) {
+                currentLang = savedLang;
+                document.getElementById('langText').textContent = currentLang === 'en' ? 'English' : 'मराठी';
+            }
+            updateLanguage();
+
+            const session = await loadData('session', false);
+            if (session && session.empId) {
+                currentUser = session;
+                selectedRole = session.role;
+                document.getElementById('empId').value = session.empId;
+                document.getElementById('loginScreen').classList.add('hidden');
+
+                if (selectedRole === 'admin') {
+                    document.getElementById('adminApp').classList.add('active');
+                    await loadAdminData();
+                } else {
+                    document.getElementById('mainApp').classList.add('active');
+                    document.getElementById('bottomNav').classList.add('show');
+                    await restoreAttendanceState();
+                }
+                updateLanguage();
+            }
+        });
+    </script>
+        <!-- Prince Kamble Footer -->
+    <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; color: white; font-size: 14px; font-weight: 600; z-index: 999; background: rgba(0,0,0,0.3); padding: 8px 16px; border-radius: 20px;">
+        | Created by : 👑Prince Kamble
+    </div>
+</body>
+</html>
