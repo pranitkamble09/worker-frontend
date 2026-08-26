@@ -2485,9 +2485,9 @@ const API_URL = 'https://worker-portal-backend-xmv4.onrender.com/api';
         let selectedRole = 'worker';
         let currentUser = { empId: null, role: 'worker' };
         let watchId = null;
-        let onFieldDuty = false;
+        let autoCheckoutEnabled = true;
         let gpsLostTimer = null;
-        const GPS_LOST_GRACE_MS = 30000; // 30s grace period before auto checkout
+        const GPS_LOST_GRACE_MS = 900000; // 15 minutes
 
         // Company reference location - update with actual factory GPS coordinates
         const COMPANY_LOCATION = { lat: 18.5793, lng: 73.7466, radius: 200 }; // radius in meters
@@ -2591,8 +2591,14 @@ const API_URL = 'https://worker-portal-backend-xmv4.onrender.com/api';
         }
 
         async function autoCheckout(reason) {
-            if (!isCheckedIn) return;
-            isCheckedIn = false;
+    if (!isCheckedIn) return;
+    if (!autoCheckoutEnabled) {
+        console.log('Auto checkout disabled (field duty mode)');
+        return;
+    }
+    isCheckedIn = false;
+
+
             const checkOutTime = new Date();
             document.getElementById('currentStatus').textContent = currentLang === 'en' ? 'Auto Checked Out' : 'आपोआप चेक-आउट';
             document.getElementById('currentStatus').classList.add('checked-out');
@@ -2641,17 +2647,24 @@ const API_URL = 'https://worker-portal-backend-xmv4.onrender.com/api';
             }
         }
 
-        function toggleFieldDuty() {
-            onFieldDuty = !onFieldDuty;
-            const btnText = document.getElementById('fieldDutyBtnText');
-            if (onFieldDuty) {
-                btnText.textContent = currentLang === 'en' ? 'On Field Duty - Tap to End' : 'फील्ड ड्युटीवर - संपवण्यासाठी टॅप करा';
-                showToast(currentLang === 'en' ? 'Marked as Field Duty' : 'फील्ड ड्युटी म्हणून चिन्हांकित', 'info');
-            } else {
-                btnText.textContent = currentLang === 'en' ? 'Mark Field Duty (Going Off-site for Work)' : 'फील्ड ड्युटी चिन्हांकित करा';
-                showToast(currentLang === 'en' ? 'Field Duty ended' : 'फील्ड ड्युटी संपली', 'info');
-            }
-        }
+   function toggleFieldDuty() {
+    onFieldDuty = !onFieldDuty;
+    const btn = document.getElementById('fieldDutyBtn');
+    const btnText = document.getElementById('fieldDutyBtnText');
+    if (onFieldDuty) {
+        autoCheckoutEnabled = false;
+        btnText.textContent = currentLang === 'en' ? '🟢 On Field Duty - Tap to End' : '🟢 फील्ड ड्युटीवर - संपवण्यासाठी टॅप करा';
+        btn.style.background = '#d1fae5';
+        btn.style.borderColor = '#059669';
+        showToast(currentLang === 'en' ? 'Field Duty ON - Auto Checkout Disabled' : 'फील्ड ड्युटी चालू - ऑटो चेकआउट बंद', 'info');
+    } else {
+        autoCheckoutEnabled = true;
+        btnText.textContent = currentLang === 'en' ? 'Mark Field Duty (Going Off-site for Work)' : 'फील्ड ड्युटी चिन्हांकित करा';
+        btn.style.background = 'white';
+        btn.style.borderColor = 'var(--primary)';
+        showToast(currentLang === 'en' ? 'Field Duty OFF - Auto Checkout Enabled' : 'फील्ड ड्युटी बंद - ऑटो चेकआउट चालू', 'info');
+    }
+}
 
         // ---- Persistent Storage Helpers ----
         function showLoadingOverlay() {
