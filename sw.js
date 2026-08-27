@@ -32,16 +32,46 @@ self.addEventListener('activate', event => {
         }).then(() => self.clients.claim())
     );
 });
-
-// Fetch from cache first (offline support)
+// =========================================================
+// FETCH: Assets + Offline Data Support
+// =========================================================
 self.addEventListener('fetch', event => {
+    // Check if it's an API request (data)
+    if (event.request.url.includes('/api/') || event.request.method === 'POST') {
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    return response;
+                })
+                .catch(() => {
+                    // Offline - store request in cache
+                    return caches.open('offline-requests')
+                        .then(cache => {
+                            // Clone and store the request
+                            const requestClone = event.request.clone();
+                            cache.put(event.request, requestClone);
+                            
+                            // Return offline response
+                            return new Response(JSON.stringify({
+                                status: 'offline',
+                                message: 'Saved offline. Will sync when online.',
+                                timestamp: new Date().toISOString()
+                            }), {
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                        });
+                })
+        );
+        return;
+    }
+    
+    // Regular asset caching (existing code)
     event.respondWith(
         caches.match(event.request)
             .then(cached => {
                 if (cached) return cached;
                 return fetch(event.request)
                     .then(response => {
-                        // Cache new assets on the fly
                         if (response && response.status === 200) {
                             const clone = response.clone();
                             caches.open(CACHE_NAME)
@@ -50,7 +80,6 @@ self.addEventListener('fetch', event => {
                         return response;
                     })
                     .catch(() => {
-                        // Offline fallback
                         return new Response('You are offline. Please check your connection.', {
                             status: 503,
                             statusText: 'Service Unavailable'
@@ -58,4 +87,39 @@ self.addEventListener('fetch', event => {
                     });
             })
     );
+});
+
+// =========================================================
+// BACKGROUND SYNC (Auto-send data when internet comes back)
+// =========================================================
+self.addEventListener('sync', function(event) {
+    if (event.tag === 'sync-offline-data') {
+        event.waitUntil(syncOfflineData());
+    }
+});
+
+async function syncOfflineData() {
+    const cache = await caches.open('offline-requests');
+    const requests = await cache.keys();
+    
+    for (const request of requests) {
+        try {
+            const response = await fetch(request);
+            if (response.ok) {
+                await cache.delete(request);
+                console.log('Synced offline request:', request.url);
+            }
+        } catch (e) {
+            console.log('Sync failed, will retry later:', e);
+        }
+    }
+}
+
+// =========================================================
+// MESSAGE HANDLER (Trigger sync from main app)
+// =========================================================
+self.addEventListener('message', function(event) {
+    if (event.data === 'sync-data') {
+        event.waitUntil(syncOfflineData());
+    }
 });

@@ -4693,13 +4693,78 @@ login = function() {
         }
     }, 3000);
 };
-
-// Service Worker Registration
+// Service Worker Registration with Sync
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('Service Worker registered'))
+        .then(registration => {
+            console.log('Service Worker registered');
+            
+            // Request background sync permission
+            if ('sync' in registration) {
+                registration.sync.register('sync-offline-data')
+                    .then(() => console.log('Background sync registered'))
+                    .catch(err => console.log('Sync registration failed:', err));
+            }
+        })
         .catch(err => console.log('SW registration failed:', err));
 }
+
+// =========================================================
+// TRIGGER SYNC WHEN ONLINE
+// =========================================================
+window.addEventListener('online', function() {
+    console.log('Back online! Syncing offline data...');
+    showToast('Back online! Syncing offline data...', 'info');
+    
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage('sync-data');
+    }
+    
+    syncLocalData();
+});
+
+// Sync local data with server
+async function syncLocalData() {
+    // Check for pending check-ins
+    const pendingCheckins = await loadData('pendingCheckins', false);
+    if (pendingCheckins && pendingCheckins.length > 0) {
+        for (const data of pendingCheckins) {
+            try {
+                await fetch('https://worker-portal-backend-xmv4.onrender.com/api/attendance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } catch (e) {
+                console.log('Failed to sync check-in:', e);
+            }
+        }
+        await saveData('pendingCheckins', [], false);
+        showToast('Pending check-ins synced!', 'success');
+    }
+    
+    const pendingReports = await loadData('pendingReports', false);
+    if (pendingReports && pendingReports.length > 0) {
+        for (const report of pendingReports) {
+            try {
+                await fetch('https://worker-portal-backend-xmv4.onrender.com/api/reports', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(report)
+                });
+            } catch (e) {
+                console.log('Failed to sync report:', e);
+            }
+        }
+        await saveData('pendingReports', [], false);
+        showToast('Pending reports synced!', 'success');
+    }
+}
+
+window.addEventListener('offline', function() {
+    console.log('Offline mode activated');
+    showToast('You are offline. Data will be saved locally and synced when online.', 'info');
+});
 
  </script>
 
