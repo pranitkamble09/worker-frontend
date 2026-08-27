@@ -2491,7 +2491,7 @@ const API_URL = 'https://worker-portal-backend-xmv4.onrender.com/api';
         const GPS_LOST_GRACE_MS = 900000; // 15 minutes
 
         // Company reference location - update with actual factory GPS coordinates
-        const COMPANY_LOCATION = { lat: 18.5793, lng: 73.7466, radius: 200 }; // radius in meters
+        const COMPANY_LOCATION = { lat: 18.6281953, lng: 73.8401604, radius: 100 }; // radius in meters
 
         function haversineDistance(lat1, lng1, lat2, lng2) {
             const R = 6371000;
@@ -2916,7 +2916,7 @@ const API_URL = 'https://worker-portal-backend-xmv4.onrender.com/api';
 
         // TRIAL MODE: set to true once operators are checking in from the actual factory location.
         // While false, check-in works from anywhere (location is still recorded, just not enforced).
-        const GEOFENCE_ENABLED = false;
+        const GEOFENCE_ENABLED = true;
 
         async function checkIn() {
             const checkInBtn = document.getElementById('checkInBtn');
@@ -3792,27 +3792,74 @@ const API_URL = 'https://worker-portal-backend-xmv4.onrender.com/api';
             await renderOrdersList();
             showToast(currentLang === 'en' ? 'Order removed' : 'ऑर्डर काढली', 'info');
         }
+async function renderOrdersList() {
+    const panel = document.getElementById('ordersListPanel');
+    if (!panel) return;
+    const orders = await loadOrders();
 
-        async function renderOrdersList() {
-            const panel = document.getElementById('ordersListPanel');
-            if (!panel) return;
-            const orders = await loadOrders();
+    if (orders.length === 0) {
+        panel.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 20px;">${currentLang === 'en' ? 'No inward orders yet' : 'अजून कोणतीही ऑर्डर नाही'}</p>`;
+        return;
+    }
 
-            if (orders.length === 0) {
-                panel.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 20px;">${currentLang === 'en' ? 'No inward orders yet' : 'अजून कोणतीही ऑर्डर नाही'}</p>`;
-                return;
-            }
+    panel.innerHTML = orders.slice().reverse().map(o => `
+        <div class="worker-row">
+            <div class="worker-row-info">
+                <h4>${o.jobNo}${o.customer ? ' - ' + o.customer : ''}</h4>
+                <p>${o.size} · ${o.paper} · ${o.ups}${o.perRollQty ? ' · ' + o.perRollQty + '/roll' : ''} · Core ${o.core}${o.quantity ? ' · Qty ' + o.quantity : ''}</p>
+                ${o.convertedToJob ? '<span style="color: var(--success); font-size:12px;">✅ Converted to Job</span>' : ''}
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                ${!o.convertedToJob ? `<button class="approve-btn" onclick="convertOrderToJob('${o.id}')"><i class="fas fa-arrow-right"></i> To Job</button>` : ''}
+                <button class="reject-btn" onclick="deleteOrder('${o.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+    `).join('');
+}
 
-            panel.innerHTML = orders.slice().reverse().map(o => `
-                <div class="worker-row">
-                    <div class="worker-row-info">
-                        <h4>${o.jobNo}${o.customer ? ' - ' + o.customer : ''}</h4>
-                        <p>${o.size} · ${o.paper} · ${o.ups}${o.perRollQty ? ' · ' + o.perRollQty + '/roll' : ''} · Core ${o.core}${o.quantity ? ' · Qty ' + o.quantity : ''}</p>
-                    </div>
-                    <button class="reject-btn" onclick="deleteOrder('${o.id}')"><i class="fas fa-trash"></i></button>
-                </div>
-            `).join('');
-        }
+// ===== CONVERT ORDER TO JOB =====
+async function convertOrderToJob(orderId) {
+    const orders = await loadOrders();
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+        showToast('Order not found', 'error');
+        return;
+    }
+
+    const jobs = await loadJobs();
+    const existing = jobs.find(j => j.jobId === order.jobNo);
+    if (existing) {
+        showToast('Job already exists for this order', 'info');
+        return;
+    }
+
+    const newJob = {
+        id: 'job_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        machine: 'Pending Assignment',
+        jobId: order.jobNo,
+        description: order.size + ' - ' + order.paper + ' (' + order.customer + ')',
+        quantity: parseInt(order.quantity) || 100,
+        status: 'pending',
+        orderId: order.id,
+        customerName: order.customer,
+        size: order.size,
+        paper: order.paper,
+        ups: order.ups,
+        core: order.core,
+        perRollQty: order.perRollQty,
+        createdAt: new Date().toISOString()
+    };
+
+    jobs.push(newJob);
+    await saveJobs(jobs);
+    
+    order.convertedToJob = true;
+    order.jobId = newJob.id;
+    await saveOrders(orders);
+
+    await renderOrdersList();
+    showToast('Order converted to Job successfully!', 'success');
+}
 
         function findColumnIndex(headers, keywords) {
             for (let i = 0; i < headers.length; i++) {
