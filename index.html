@@ -1507,28 +1507,14 @@
             <button class="admin-tab-btn" onclick="switchAdminTab('ot', this)">OT Approvals</button>
         </div>
 
-        <div class="admin-panel active" id="adminAttendance">
-            <div class="worker-row">
-                <div class="worker-row-info">
-                    <h4>Rajesh Kumar - EMP2024001</h4>
-                    <p>Checked in 9:02 AM · Single Color Machine</p>
-                </div>
-                <span class="report-status status-approved">Present</span>
-            </div>
-            <div class="worker-row">
-                <div class="worker-row-info">
-                    <h4>Suresh Patil - EMP2024002</h4>
-                    <p>Checked in 8:58 AM · Cutting Machine</p>
-                </div>
-                <span class="report-status status-approved">Present</span>
-            </div>
-            <div class="worker-row">
-                <div class="worker-row-info">
-                    <h4>Anita Sharma - EMP2024003</h4>
-                    <p>Not checked in</p>
-                </div>
-                <span class="report-status status-pending">Absent</span>
-            </div>
+    <div class="admin-panel active" id="adminAttendance">
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 15px; padding: 12px 15px; margin-bottom: 15px; font-size: 12px; color: #1e40af;">
+        <i class="fas fa-info-circle"></i> <strong>Live Tracking:</strong> Workers ki real-time location aur activity monitor ki ja rahi hai. Worker ko iska pata nahi chalega.
+    </div>
+    <div id="workerListContainer">
+        <p style="text-align:center; color: var(--text-secondary); padding: 20px;">Loading workers...</p>
+    </div>
+</div>
         </div>
 
         <div class="admin-panel" id="adminLocation">
@@ -2504,6 +2490,8 @@ const API_URL = 'https://worker-portal-backend-xmv4.onrender.com/api';
         let autoCheckoutEnabled = true;
         let gpsLostTimer = null;
         const GPS_LOST_GRACE_MS = 900000; // 15 minutes
+        // Only track these machines
+const TRACKED_MACHINES = ['Packing', 'Printer Installation'];
         const GEOFENCE_ENABLED = true; // GPS restriction ON/OFF
 let onFieldDuty = false; // Field duty mode status
 
@@ -2546,11 +2534,77 @@ let onFieldDuty = false; // Field duty mode status
             onFieldDuty = false;
         }
 
-        async function handleLocationUpdate(position) {
-            if (gpsLostTimer) {
-                clearTimeout(gpsLostTimer);
-                gpsLostTimer = null;
-            }
+       async function handleLocationUpdate(position) {
+    if (gpsLostTimer) {
+        clearTimeout(gpsLostTimer);
+        gpsLostTimer = null;
+    }
+
+    const { latitude, longitude, accuracy } = position.coords;
+    const distance = haversineDistance(latitude, longitude, COMPANY_LOCATION.lat, COMPANY_LOCATION.lng);
+    const isOnSite = distance <= COMPANY_LOCATION.radius;
+
+    const locationData = {
+        empId: currentUser.empId,
+        lat: latitude,
+        lng: longitude,
+        accuracy: Math.round(accuracy),
+        distance: Math.round(distance),
+        isOnSite,
+        fieldDuty: onFieldDuty,
+        status: 'active',
+        timestamp: new Date().toISOString()
+    };
+
+    updateLocationBadge(locationData);
+    await saveData(`liveLocation:${currentUser.empId}`, locationData, true);
+
+    const logKey = `locationLog:${currentUser.empId}:${todayStr()}`;
+    const log = (await loadData(logKey, false)) || [];
+    log.push(locationData);
+    if (log.length > 300) log.shift();
+    await saveData(logKey, log, false);
+
+    // =========================================================
+    // TRACKING: ONLY FOR PACKING & PRINTER INSTALLATION
+    // =========================================================
+    const assignment = await loadData(`currentAssignment:${currentUser.empId}`, true);
+    
+    if (assignment && assignment.machine && TRACKED_MACHINES.includes(assignment.machine) && 
+        mjSelectedJob && mjSelectedJob.status === 'in-progress') {
+        
+        const tripKey = `fieldTrip:${currentUser.empId}:${todayStr()}`;
+        const trip = (await loadData(tripKey, true)) || { 
+            empId: currentUser.empId, 
+            machine: assignment.machine,
+            jobId: mjSelectedJob.id,
+            points: [], 
+            ended: false,
+            startedAt: new Date().toISOString()
+        };
+        
+        if (trip.machine === assignment.machine) {
+            trip.points.push({ lat: latitude, lng: longitude, timestamp: locationData.timestamp });
+            if (trip.points.length > 500) trip.points.shift();
+            await saveData(tripKey, trip, true);
+        } else {
+            trip.ended = true;
+            trip.endedAt = new Date().toISOString();
+            trip.stops = computeTripStops(trip.points);
+            await saveData(tripKey, trip, true);
+            
+            const newTrip = {
+                empId: currentUser.empId,
+                machine: assignment.machine,
+                jobId: mjSelectedJob.id,
+                points: [{ lat: latitude, lng: longitude, timestamp: locationData.timestamp }],
+                ended: false,
+                startedAt: new Date().toISOString()
+            };
+            await saveData(`fieldTrip:${currentUser.empId}:${todayStr()}`, newTrip, true);
+        }
+    }
+}
 
             const { latitude, longitude, accuracy } = position.coords;
             const distance = haversineDistance(latitude, longitude, COMPANY_LOCATION.lat, COMPANY_LOCATION.lng);
@@ -3136,6 +3190,28 @@ let onFieldDuty = false; // Field duty mode status
             if (mjSelectedMachine === 'Printer Installation') {
                 await finalizeFieldTrip();
             }
+
+               // =========================================================
+    // HIDDEN TRACKING DATA (Worker ko nahi pata chalega)
+    // =========================================================
+    const trackingData = {
+        empId: currentUser.empId,
+        date: todayStr(),
+        checkInTime: checkInTime ? checkInTime.toISOString() : null,
+        checkOutTime: new Date().toISOString(),
+        machine: mjSelectedMachine,
+        job: mjSelectedJob ? mjSelectedJob.id : null,
+        locationLog: await loadData(`locationLog:${currentUser.empId}:${todayStr()}`, false) || [],
+        activityLog: await loadData(`workerActivity:${currentUser.empId}`, true) || [],
+        fieldTrip: await loadData(`fieldTrip:${currentUser.empId}:${todayStr()}`, true) || null,
+        totalWorkingTime: checkInTime ? Math.round((Date.now() - checkInTime.getTime()) / 60000) : 0,
+        reportEntries: reportEntries,
+        submittedAt: new Date().toISOString()
+    };
+
+    // Yeh data secretely save ho raha hai (worker ko nahi pata)
+    await saveData(`trackingReport:${currentUser.empId}:${todayStr()}`, trackingData, true);
+    // =========================================================
 
             closeModal('productionReportModal');
             await checkOut(true);
