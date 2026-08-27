@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Worker Management System</title>
-    
+
     <link rel="manifest" href="/manifest.json">  
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -1279,7 +1279,7 @@
     </div>
 
     <div class="login-container" id="loginScreen">
-        <div class="login-box">
+        <div class="login-box"> 
             <div class="login-header">
                 <h1 id="loginTitle">Worker Portal</h1>
                 <p id="loginSubtitle">Sign in to your account</p>
@@ -1305,9 +1305,21 @@
                 <input type="password" id="password" placeholder="Enter Password" onkeypress="handleEnter(event)">
             </div>
 
-            <button class="login-btn" onclick="login()" id="loginBtn">
-                <span id="loginBtnText">Login</span>
-            </button>
+<!-- ===== YAHAN PASTE KARO 👇 ===== -->
+<div style="margin-top: 15px; text-align: center;">
+    <p style="color: var(--text-secondary); font-size: 13px;">
+        <span id="noAccountText">Don't have an account?</span>
+        <button onclick="showRegisterForm()" style="background: none; border: none; color: var(--primary); font-weight: 600; cursor: pointer; font-size: 13px;">
+            <span id="registerNowText">Register Now</span>
+        </button>
+    </p>
+    <p style="margin-top: 5px;">
+        <button onclick="showForgotPassword()" style="background: none; border: none; color: var(--text-secondary); font-size: 12px; cursor: pointer; text-decoration: underline;">
+            <span id="forgotPasswordText">Forgot Password?</span>
+        </button>
+    </p>
+</div>
+
         </div>
     </div>
 
@@ -2492,6 +2504,8 @@ const API_URL = 'https://worker-portal-backend-xmv4.onrender.com/api';
         let autoCheckoutEnabled = true;
         let gpsLostTimer = null;
         const GPS_LOST_GRACE_MS = 900000; // 15 minutes
+        const GEOFENCE_ENABLED = true; // GPS restriction ON/OFF
+let onFieldDuty = false; // Field duty mode status
 
         // Company reference location - update with actual factory GPS coordinates
         const COMPANY_LOCATION = { lat: 18.6281953, lng: 73.8401604, radius: 100 }; // radius in meters
@@ -4410,8 +4424,274 @@ async function convertOrderToJob(orderId) {
                 }
                 updateLanguage();
             }
+
+         addSOSButton();   
         });
-    </script>
+   
+    
+    // ============================================
+// NEW FEATURES: Registration, Forgot Password, Birthday, SOS
+// ============================================
+
+function showRegisterForm() {
+    openModal('registerModal');
+}
+
+function previewProfilePic(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('regProfileImg').src = e.target.result;
+            document.getElementById('regProfilePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function registerUser() {
+    const empId = document.getElementById('regEmpId').value.trim();
+    const name = document.getElementById('regName').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regConfirmPassword').value;
+    const dob = document.getElementById('regDob').value;
+
+    if (!empId || !name || !password || !confirm) {
+        showToast('Please fill all required fields', 'error');
+        return;
+    }
+
+    if (password !== confirm) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+
+    if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+
+    const users = await loadData('registeredUsers', true) || [];
+    if (users.find(u => u.empId === empId)) {
+        showToast('Employee ID already registered', 'error');
+        return;
+    }
+
+    let profilePic = '';
+    const img = document.getElementById('regProfileImg');
+    if (img && img.src) {
+        profilePic = img.src;
+    }
+
+    users.push({
+        empId,
+        name,
+        password,
+        dob,
+        profilePic,
+        registeredAt: new Date().toISOString()
+    });
+    await saveData('registeredUsers', users, true);
+
+    document.getElementById('empId').value = empId;
+    document.getElementById('password').value = password;
+    closeModal('registerModal');
+    showToast('Registration successful! Please login.', 'success');
+
+    document.getElementById('regEmpId').value = '';
+    document.getElementById('regName').value = '';
+    document.getElementById('regPassword').value = '';
+    document.getElementById('regConfirmPassword').value = '';
+    document.getElementById('regDob').value = '';
+    document.getElementById('regProfilePreview').style.display = 'none';
+    document.getElementById('regProfilePic').value = '';
+}
+
+function showForgotPassword() {
+    openModal('forgotModal');
+}
+
+async function resetPassword() {
+    const empId = document.getElementById('forgotEmpId').value.trim();
+    const newPass = document.getElementById('forgotNewPassword').value;
+    const confirm = document.getElementById('forgotConfirmPassword').value;
+
+    if (!empId || !newPass || !confirm) {
+        showToast('Please fill all fields', 'error');
+        return;
+    }
+
+    if (newPass !== confirm) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+
+    if (newPass.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+
+    const users = await loadData('registeredUsers', true) || [];
+    const user = users.find(u => u.empId === empId);
+    if (!user) {
+        showToast('Employee ID not found', 'error');
+        return;
+    }
+
+    user.password = newPass;
+    await saveData('registeredUsers', users, true);
+
+    closeModal('forgotModal');
+    document.getElementById('forgotEmpId').value = '';
+    document.getElementById('forgotNewPassword').value = '';
+    document.getElementById('forgotConfirmPassword').value = '';
+    showToast('Password reset successfully! Please login.', 'success');
+}
+
+function checkBirthday(dob) {
+    if (!dob) return;
+    const today = new Date();
+    const birth = new Date(dob);
+    if (today.getMonth() === birth.getMonth() && today.getDate() === birth.getDate()) {
+        setTimeout(() => {
+            showToast('🎉 Happy Birthday! 🎂 Wishing you a wonderful day!', 'success');
+        }, 2000);
+    }
+}
+
+function addSOSButton() {
+    const btn = document.createElement('button');
+    btn.id = 'sosBtn';
+    btn.innerHTML = '🚨 SOS';
+    btn.style.cssText = `
+        position: fixed;
+        bottom: 100px;
+        right: 20px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 70px;
+        height: 70px;
+        font-size: 18px;
+        font-weight: 700;
+        box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5);
+        z-index: 999;
+        cursor: pointer;
+        animation: pulse 1.5s infinite;
+    `;
+    btn.onclick = triggerSOS;
+    document.body.appendChild(btn);
+}
+
+function triggerSOS() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const { latitude, longitude } = pos.coords;
+            const message = `🚨 SOS ALERT! 🚨\nEmployee: ${currentUser.empId || 'Unknown'}\nLocation: https://maps.google.com/?q=${latitude},${longitude}\nTime: ${new Date().toLocaleString()}`;
+            alert(message);
+            saveData(`sosAlert:${currentUser.empId}:${Date.now()}`, {
+                empId: currentUser.empId,
+                lat: latitude,
+                lng: longitude,
+                timestamp: new Date().toISOString()
+            }, true);
+            showToast('SOS alert sent to admin!', 'success');
+        }, () => {
+            const message = `🚨 SOS ALERT! 🚨\nEmployee: ${currentUser.empId || 'Unknown'}\nLocation: Unable to get GPS\nTime: ${new Date().toLocaleString()}`;
+            alert(message);
+        });
+    } else {
+        alert(`🚨 SOS ALERT! 🚨\nEmployee: ${currentUser.empId || 'Unknown'}\nPlease share your location manually.`);
+    }
+}
+
+// Modified login to check birthday
+const originalLogin = login;
+login = function() {
+    originalLogin.call(this);
+    setTimeout(async () => {
+        const users = await loadData('registeredUsers', true) || [];
+        const user = users.find(u => u.empId === currentUser.empId);
+        if (user && user.dob) {
+            checkBirthday(user.dob);
+        }
+    }, 3000);
+};
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.log('SW registration failed:', err));
+}
+
+ </script>
+
+ <!-- ===== REGISTRATION MODAL ===== -->
+<div class="modal-overlay" id="registerModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Register New Account</h3>
+            <button class="close-btn" onclick="closeModal('registerModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="form-group">
+            <label>Employee ID *</label>
+            <input type="text" id="regEmpId" placeholder="Choose Employee ID">
+        </div>
+        <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="regName" placeholder="Enter your full name">
+        </div>
+        <div class="form-group">
+            <label>Password *</label>
+            <input type="password" id="regPassword" placeholder="Choose a strong password">
+        </div>
+        <div class="form-group">
+            <label>Confirm Password *</label>
+            <input type="password" id="regConfirmPassword" placeholder="Re-enter password">
+        </div>
+        <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="regDob">
+        </div>
+        <div class="form-group">
+            <label>Profile Picture</label>
+            <div class="photo-upload" onclick="document.getElementById('regProfilePic').click()">
+                <i class="fas fa-camera"></i>
+                <div>Click to upload photo</div>
+            </div>
+            <input type="file" id="regProfilePic" accept="image/*" style="display:none;" onchange="previewProfilePic(this)">
+            <div id="regProfilePreview" style="margin-top:10px; display:none;">
+                <img id="regProfileImg" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">
+            </div>
+        </div>
+        <button class="submit-btn" onclick="registerUser()">Register</button>
+    </div>
+</div>
+
+<!-- ===== FORGOT PASSWORD MODAL ===== -->
+<div class="modal-overlay" id="forgotModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Reset Password</h3>
+            <button class="close-btn" onclick="closeModal('forgotModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="form-group">
+            <label>Employee ID</label>
+            <input type="text" id="forgotEmpId" placeholder="Enter your Employee ID">
+        </div>
+        <div class="form-group">
+            <label>New Password</label>
+            <input type="password" id="forgotNewPassword" placeholder="Enter new password">
+        </div>
+        <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="forgotConfirmPassword" placeholder="Re-enter new password">
+        </div>
+        <button class="submit-btn" onclick="resetPassword()">Reset Password</button>
+    </div>
+</div>
+
         <!-- Prince Kamble Footer -->
     <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; color: white; font-size: 14px; font-weight: 600; z-index: 999; background: rgba(0,0,0,0.3); padding: 8px 16px; border-radius: 20px;">
         | Created by : 👑Prince Kamble
