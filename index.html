@@ -2891,7 +2891,7 @@ let onFieldDuty = false; // Field duty mode status
             }
         }
 
-      function login() {
+    async function login() {
     const empId = document.getElementById('empId').value.trim();
     const password = document.getElementById('password').value.trim();
     const errorDiv = document.getElementById('errorMessage');
@@ -2911,32 +2911,30 @@ let onFieldDuty = false; // Field duty mode status
     
     currentUser = { empId, role: selectedRole };
     
-    setTimeout(async () => {
-        await saveData('session', currentUser, false);
-        
-        const loginScreen = document.getElementById('loginScreen');
-        const mainApp = document.getElementById('mainApp');
-        const adminApp = document.getElementById('adminApp');
-        const bottomNav = document.getElementById('bottomNav');
-        
-        loginScreen.classList.add('hidden');
-        
-        // ✅ ADMIN CHECK — SIRF EK BAR
-        if (selectedRole === 'admin') {
-            adminApp.classList.add('active');
-            await loadAdminData();
-        } else {
-            mainApp.classList.add('active');
-            bottomNav.classList.add('show');
-            await restoreAttendanceState();
-        }
-        
-        loginBtn.disabled = false;
-        loginBtn.innerHTML = '<span id="loginBtnText">Login</span>';
-        updateLanguage();
-        showToast(currentLang === 'en' ? 'Welcome back!' : 'पुन्हा स्वागत आहे!', 'success');
-        
-    }, 1500);
+    // ✅ Save session
+    await saveData('session', currentUser, false);
+    
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    const adminApp = document.getElementById('adminApp');
+    const bottomNav = document.getElementById('bottomNav');
+    
+    loginScreen.classList.add('hidden');
+    
+    // ✅ Admin ya Worker check
+    if (selectedRole === 'admin') {
+        adminApp.classList.add('active');
+        await loadAdminData();
+    } else {
+        mainApp.classList.add('active');
+        bottomNav.classList.add('show');
+        await restoreAttendanceState();
+    }
+    
+    loginBtn.disabled = false;
+    loginBtn.innerHTML = '<span id="loginBtnText">Login</span>';
+    updateLanguage();
+    showToast(currentLang === 'en' ? 'Welcome back!' : 'पुन्हा स्वागत आहे!', 'success');
 }
         async function logout() {
             await saveData('session', null, false);
