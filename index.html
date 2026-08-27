@@ -2891,53 +2891,53 @@ let onFieldDuty = false; // Field duty mode status
             }
         }
 
-        function login() {
-            const empId = document.getElementById('empId').value.trim();
-            const password = document.getElementById('password').value.trim();
-            const errorDiv = document.getElementById('errorMessage');
-            const errorText = document.getElementById('errorText');
-            const loginBtn = document.getElementById('loginBtn');
-            
-            if (!empId || !password) {
-                errorText.textContent = currentLang === 'en' ? 'Please enter Employee ID and Password' : 'कृपया कर्मचारी आयडी आणि पासवर्ड टाका';
-                errorDiv.classList.add('show');
-                return;
-            }
-            
-            errorDiv.classList.remove('show');
-            
-            loginBtn.disabled = true;
-            loginBtn.innerHTML = '<span class="spinner"></span> Logging in...';
-            
-            currentUser = { empId, role: selectedRole };
-            
-            setTimeout(async () => {
-                await saveData('session', currentUser, false);
-                
-                const loginScreen = document.getElementById('loginScreen');
-                const mainApp = document.getElementById('mainApp');
-                const adminApp = document.getElementById('adminApp');
-                const bottomNav = document.getElementById('bottomNav');
-                
-                loginScreen.classList.add('hidden');
-                
-                setTimeout(async () => {
-                    if (selectedRole === 'admin') {
-                        adminApp.classList.add('active');
-                        await loadAdminData();
-                    } else {
-                        mainApp.classList.add('active');
-                        bottomNav.classList.add('show');
-                        await restoreAttendanceState();
-                    }
-                    loginBtn.disabled = false;
-                    loginBtn.innerHTML = '<span id="loginBtnText">Login</span>';
-                    updateLanguage();
-                    showToast(currentLang === 'en' ? 'Welcome back!' : 'पुन्हा स्वागत आहे!', 'success');
-                }, 500);
-            }, 1500);
+      function login() {
+    const empId = document.getElementById('empId').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorDiv = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
+    const loginBtn = document.getElementById('loginBtn');
+    
+    if (!empId || !password) {
+        errorText.textContent = currentLang === 'en' ? 'Please enter Employee ID and Password' : 'कृपया कर्मचारी आयडी आणि पासवर्ड टाका';
+        errorDiv.classList.add('show');
+        return;
+    }
+    
+    errorDiv.classList.remove('show');
+    
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="spinner"></span> Logging in...';
+    
+    currentUser = { empId, role: selectedRole };
+    
+    setTimeout(async () => {
+        await saveData('session', currentUser, false);
+        
+        const loginScreen = document.getElementById('loginScreen');
+        const mainApp = document.getElementById('mainApp');
+        const adminApp = document.getElementById('adminApp');
+        const bottomNav = document.getElementById('bottomNav');
+        
+        loginScreen.classList.add('hidden');
+        
+        // ✅ ADMIN CHECK — SIRF EK BAR
+        if (selectedRole === 'admin') {
+            adminApp.classList.add('active');
+            await loadAdminData();
+        } else {
+            mainApp.classList.add('active');
+            bottomNav.classList.add('show');
+            await restoreAttendanceState();
         }
-
+        
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<span id="loginBtnText">Login</span>';
+        updateLanguage();
+        showToast(currentLang === 'en' ? 'Welcome back!' : 'पुन्हा स्वागत आहे!', 'success');
+        
+    }, 1500);
+}
         async function logout() {
             await saveData('session', null, false);
             document.getElementById('mainApp').classList.remove('active');
