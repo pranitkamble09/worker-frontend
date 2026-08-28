@@ -2537,7 +2537,7 @@ let onFieldDuty = false; // Field duty mode status
             onFieldDuty = false;
         }
 
-       async function handleLocationUpdate(position) {
+  async function handleLocationUpdate(position) {
     if (gpsLostTimer) {
         clearTimeout(gpsLostTimer);
         gpsLostTimer = null;
@@ -2608,40 +2608,6 @@ let onFieldDuty = false; // Field duty mode status
         }
     }
 }
-
-            const { latitude, longitude, accuracy } = position.coords;
-            const distance = haversineDistance(latitude, longitude, COMPANY_LOCATION.lat, COMPANY_LOCATION.lng);
-            const isOnSite = distance <= COMPANY_LOCATION.radius;
-
-            const locationData = {
-                empId: currentUser.empId,
-                lat: latitude,
-                lng: longitude,
-                accuracy: Math.round(accuracy),
-                distance: Math.round(distance),
-                isOnSite,
-                fieldDuty: onFieldDuty,
-                status: 'active',
-                timestamp: new Date().toISOString()
-            };
-
-            updateLocationBadge(locationData);
-            await saveData(`liveLocation:${currentUser.empId}`, locationData, true);
-
-            const logKey = `locationLog:${currentUser.empId}:${todayStr()}`;
-            const log = (await loadData(logKey, false)) || [];
-            log.push(locationData);
-            if (log.length > 300) log.shift();
-            await saveData(logKey, log, false);
-
-            if (mjSelectedMachine === 'Printer Installation' && mjSelectedJob && mjSelectedJob.status === 'in-progress') {
-                const tripKey = `fieldTrip:${currentUser.empId}:${todayStr()}`;
-                const trip = (await loadData(tripKey, true)) || { empId: currentUser.empId, jobId: mjSelectedJob.id, points: [], ended: false };
-                trip.points.push({ lat: latitude, lng: longitude, timestamp: locationData.timestamp });
-                if (trip.points.length > 500) trip.points.shift();
-                await saveData(tripKey, trip, true);
-            }
-        }
 
         function handleLocationError(err) {
             const badge = document.getElementById('locationBadge');
@@ -2752,14 +2718,15 @@ let onFieldDuty = false; // Field duty mode status
             if (el) el.classList.remove('show');
         }
 
-        function hasStorage() {
-            return typeof window.storage !== 'undefined';
+
+      function hasStorage() {
+            return typeof Storage !== 'undefined';
         }
 
         async function saveData(key, value, shared = false) {
             if (!hasStorage()) return;
             try {
-                await window.storage.set(key, JSON.stringify(value), shared);
+                localStorage.setItem(key, JSON.stringify(value));
             } catch (e) {
                 console.error('Save failed:', key, e);
             }
@@ -2768,8 +2735,8 @@ let onFieldDuty = false; // Field duty mode status
         async function loadData(key, shared = false) {
             if (!hasStorage()) return null;
             try {
-                const result = await window.storage.get(key, shared);
-                return result ? JSON.parse(result.value) : null;
+                const result = localStorage.getItem(key);
+                return result ? JSON.parse(result) : null;
             } catch (e) {
                 return null;
             }
@@ -2988,7 +2955,7 @@ let onFieldDuty = false; // Field duty mode status
 
         // TRIAL MODE: set to true once operators are checking in from the actual factory location.
         // While false, check-in works from anywhere (location is still recorded, just not enforced).
-        const GEOFENCE_ENABLED = true;
+
 
         async function checkIn() {
             const checkInBtn = document.getElementById('checkInBtn');
@@ -4075,16 +4042,16 @@ async function convertOrderToJob(orderId) {
             await renderOperatorsList();
             showToast(currentLang === 'en' ? 'Operator profile saved!' : 'ऑपरेटर प्रोफाइल जतन झाली!', 'success');
         }
-
         async function loadAllOperatorProfiles() {
             if (!hasStorage()) return [];
             try {
-                const listResult = await window.storage.list('operatorProfile:', true);
-                if (!listResult || !listResult.keys) return [];
                 const profiles = [];
-                for (const key of listResult.keys) {
-                    const data = await loadData(key, true);
-                    if (data) profiles.push(data);
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('operatorProfile:')) {
+                        const data = await loadData(key, true);
+                        if (data) profiles.push(data);
+                    }
                 }
                 return profiles;
             } catch (e) {
@@ -4282,15 +4249,16 @@ async function convertOrderToJob(orderId) {
             panel.innerHTML = rows.join('');
         }
 
-        async function loadLiveLocations() {
+       async function loadLiveLocations() {
             if (!hasStorage()) return [];
             try {
-                const listResult = await window.storage.list('liveLocation:', true);
-                if (!listResult || !listResult.keys) return [];
                 const locations = [];
-                for (const key of listResult.keys) {
-                    const data = await loadData(key, true);
-                    if (data) locations.push(data);
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('liveLocation:')) {
+                        const data = await loadData(key, true);
+                        if (data) locations.push(data);
+                    }
                 }
                 return locations;
             } catch (e) {
