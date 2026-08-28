@@ -1329,9 +1329,12 @@
     <div class="app-container" id="mainApp">
         <div class="header">
             <div class="header-top">
-                <div class="worker-info">
-                    <h2 id="workerName">Rajesh Kumar</h2>
-                    <p id="workerId">ID: EMP2024001 | Production Dept</p>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img id="workerProfilePic" src="" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; display: none; border: 2px solid var(--primary);">
+                    <div class="worker-info">
+                        <h2 id="workerName">Rajesh Kumar</h2>
+                        <p id="workerId">ID: EMP2024001 | Production Dept</p>
+                    </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="live-clock" id="liveClock">09:30:45 AM</div>
@@ -1466,9 +1469,12 @@
     <div class="admin-container" id="adminApp">
         <div class="header">
             <div class="header-top">
-                <div class="worker-info">
-                    <h2 id="adminName">Admin Panel</h2>
-                    <p id="adminSub">Factory Operations Overview</p>
+               <div style="display: flex; align-items: center; gap: 12px;">
+                    <img id="adminProfilePic" src="" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; display: none; border: 2px solid var(--primary);">
+                    <div class="worker-info">
+                        <h2 id="adminName">Admin Panel</h2>
+                        <p id="adminSub">Factory Operations Overview</p>
+                    </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="live-clock" id="adminClock">09:30:45 AM</div>
@@ -2858,7 +2864,7 @@ let onFieldDuty = false; // Field duty mode status
             }
         }
 
-    async function login() {
+  async function login() {
     const empId = document.getElementById('empId').value.trim();
     const password = document.getElementById('password').value.trim();
     const errorDiv = document.getElementById('errorMessage');
@@ -2866,35 +2872,58 @@ let onFieldDuty = false; // Field duty mode status
     const loginBtn = document.getElementById('loginBtn');
     
     if (!empId || !password) {
-        errorText.textContent = currentLang === 'en' ? 'Please enter Employee ID and Password' : 'कृपया कर्मचारी आयडी आणि पासवर्ड टाका';
+        errorText.textContent = currentLang === 'en' ? 'Please enter ID and Password' : 'कृपया आयडी आणि पासवर्ड टाका';
         errorDiv.classList.add('show');
         return;
     }
-    
     errorDiv.classList.remove('show');
-    
     loginBtn.disabled = true;
     loginBtn.innerHTML = '<span class="spinner"></span> Logging in...';
+
+    // Verify Password and Role
+    let userName = empId;
+    let userPic = '';
     
-    currentUser = { empId, role: selectedRole };
+    // Default Master Admin Bypass (agar koi apna password bhool jaye)
+    if (!(selectedRole === 'admin' && empId === 'ADMIN001' && password === 'admin123')) {
+        const users = await loadData('registeredUsers', true) || [];
+        const user = users.find(u => u.empId === empId && u.role === selectedRole);
+        
+        if (!user || user.password !== password) {
+            errorText.textContent = currentLang === 'en' ? 'Invalid ID, Password or Role!' : 'चुकीचे आयडी, पासवर्ड किंवा भूमिका!';
+            errorDiv.classList.add('show');
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<span id="loginBtnText">Login</span>';
+            return;
+        }
+        userName = user.name;
+        userPic = user.profilePic || '';
+    } else {
+        userName = 'Master Admin';
+    }
     
-    // ✅ Save session
+    currentUser = { empId, role: selectedRole, name: userName, profilePic: userPic };
     await saveData('session', currentUser, false);
     
-    const loginScreen = document.getElementById('loginScreen');
-    const mainApp = document.getElementById('mainApp');
-    const adminApp = document.getElementById('adminApp');
-    const bottomNav = document.getElementById('bottomNav');
+    document.getElementById('loginScreen').classList.add('hidden');
     
-    loginScreen.classList.add('hidden');
-    
-    // ✅ Admin ya Worker check
     if (selectedRole === 'admin') {
-        adminApp.classList.add('active');
+        document.getElementById('adminApp').classList.add('active');
+        document.getElementById('adminName').textContent = userName;
+        if(userPic) {
+            const pic = document.getElementById('adminProfilePic');
+            pic.src = userPic; pic.style.display = 'block';
+        }
         await loadAdminData();
     } else {
-        mainApp.classList.add('active');
-        bottomNav.classList.add('show');
+        document.getElementById('mainApp').classList.add('active');
+        document.getElementById('bottomNav').classList.add('show');
+        document.getElementById('workerName').textContent = userName;
+        document.getElementById('workerId').textContent = `ID: ${empId}`;
+        if(userPic) {
+            const pic = document.getElementById('workerProfilePic');
+            pic.src = userPic; pic.style.display = 'block';
+        }
         await restoreAttendanceState();
     }
     
@@ -4494,7 +4523,53 @@ function previewProfilePic(input) {
 }
 
 async function registerUser() {
+    const role = document.getElementById('regRole').value;
     const empId = document.getElementById('regEmpId').value.trim();
+    const name = document.getElementById('regName').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regConfirmPassword').value;
+    const dob = document.getElementById('regDob').value;
+
+    if (!empId || !name || !password || !confirm) {
+        showToast('Please fill all required fields', 'error');
+        return;
+    }
+
+    if (password !== confirm) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+
+    const users = await loadData('registeredUsers', true) || [];
+    if (users.find(u => u.empId === empId)) {
+        showToast('ID/Username already registered', 'error');
+        return;
+    }
+
+    let profilePic = '';
+    const img = document.getElementById('regProfileImg');
+    if (img && img.src && img.src !== window.location.href) {
+        profilePic = img.src;
+    }
+
+    users.push({
+        empId, name, password, dob, profilePic, role,
+        registeredAt: new Date().toISOString()
+    });
+    await saveData('registeredUsers', users, true);
+
+    document.getElementById('empId').value = empId;
+    document.getElementById('password').value = password;
+    closeModal('registerModal');
+    showToast(`${role.toUpperCase()} Registration successful! Please login.`, 'success');
+
+    // Form clear karein
+    document.getElementById('regEmpId').value = '';
+    document.getElementById('regName').value = '';
+    document.getElementById('regPassword').value = '';
+    document.getElementById('regConfirmPassword').value = '';
+    document.getElementById('regProfilePreview').style.display = 'none';
+}
     const name = document.getElementById('regName').value.trim();
     const password = document.getElementById('regPassword').value;
     const confirm = document.getElementById('regConfirmPassword').value;
@@ -4745,8 +4820,15 @@ window.addEventListener('offline', function() {
             <button class="close-btn" onclick="closeModal('registerModal')"><i class="fas fa-times"></i></button>
         </div>
         <div class="form-group">
-            <label>Employee ID *</label>
-            <input type="text" id="regEmpId" placeholder="Choose Employee ID">
+            <label>Register As *</label>
+            <select id="regRole">
+                <option value="worker">Worker</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Employee ID / Username *</label>
+            <input type="text" id="regEmpId" placeholder="Choose Employee ID or Username">
         </div>
         <div class="form-group">
             <label>Full Name *</label>
