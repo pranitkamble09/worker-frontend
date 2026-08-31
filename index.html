@@ -1325,15 +1325,13 @@
 
         </div>
     </div>
-
-    <div class="app-container" id="mainApp">
-        <div class="header">
+<div class="header">
             <div class="header-top">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img id="workerProfilePic" src="" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; display: none; border: 2px solid var(--primary);">
                     <div class="worker-info">
-                        <h2 id="workerName">Rajesh Kumar</h2>
-                        <p id="workerId">ID: EMP2024001 | Production Dept</p>
+                        <h2 id="workerName">Pranit Kamble</h2>
+                        <p id="workerId">ID: EMP001 | Production Dept</p>
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -4163,10 +4161,18 @@ async function convertOrderToJob(orderId) {
             hideLoadingOverlay();
         }
 
-        async function renderOperatorsList() {
+     async function renderOperatorsList() {
             const panel = document.getElementById('operatorsListPanel');
             if (!panel) return;
-            const [profiles, locations] = await Promise.all([loadAllOperatorProfiles(), loadLiveLocations()]);
+            
+            // Auto-seed 26 workers if list is empty
+            let profiles = await loadAllOperatorProfiles();
+            if (profiles.length === 0) {
+                await seedWorkersIfEmpty();
+                profiles = await loadAllOperatorProfiles();
+            }
+            
+            const locations = await loadLiveLocations();
 
             if (profiles.length === 0) {
                 panel.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 20px;">${currentLang === 'en' ? 'No operator profiles added yet' : 'अजून कोणतीही प्रोफाइल जोडलेली नाही'}</p>`;
@@ -4249,7 +4255,6 @@ async function convertOrderToJob(orderId) {
             await renderOrdersList();
             await renderOperatorsList();
         }
-
         async function renderAttendanceOverview() {
             const panel = document.getElementById('adminAttendance');
             if (!panel) return;
@@ -4846,17 +4851,20 @@ window.addEventListener('offline', function() {
             <label>Date of Birth</label>
             <input type="date" id="regDob">
         </div>
-        <div class="form-group">
+       <div class="form-group">
             <label>Profile Picture</label>
-            <div class="photo-upload" onclick="document.getElementById('regProfilePic').click()">
-                <i class="fas fa-camera"></i>
-                <div>Click to upload photo</div>
+            <div class="photo-upload" onclick="document.getElementById('regProfilePic').click()" style="border: 2px dashed var(--primary); padding: 20px; border-radius: 15px; text-align: center; cursor: pointer; background: #f9fafb;">
+                <i class="fas fa-camera" style="font-size: 30px; color: var(--primary); margin-bottom: 8px;"></i>
+                <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Click to upload photo</div>
+                <small style="color: var(--text-secondary);">Supports JPG, PNG</small>
             </div>
             <input type="file" id="regProfilePic" accept="image/*" style="display:none;" onchange="previewProfilePic(this)">
-            <div id="regProfilePreview" style="margin-top:10px; display:none;">
-                <img id="regProfileImg" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">
+            <div id="regProfilePreview" style="margin-top: 12px; text-align: center; display:none;">
+                <img id="regProfileImg" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                <div style="font-size: 12px; color: var(--success); margin-top: 4px; font-weight: 600;">✓ Photo Uploaded</div>
             </div>
         </div>
+
         <button class="submit-btn" onclick="registerUser()">Register</button>
     </div>
 </div>
