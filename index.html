@@ -3023,7 +3023,7 @@ let onFieldDuty = false; // Field duty mode status
                 return;
             }
 
-            navigator.geolocation.getCurrentPosition(
+         /*   navigator.geolocation.getCurrentPosition(
                 async (position) => {
                     const { latitude, longitude } = position.coords;
                     const distance = haversineDistance(latitude, longitude, COMPANY_LOCATION.lat, COMPANY_LOCATION.lng);
@@ -3060,7 +3060,7 @@ let onFieldDuty = false; // Field duty mode status
                 },
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
             );
-        }
+        } */
 
         async function checkOut(suppressToast) {
             isCheckedIn = false;
